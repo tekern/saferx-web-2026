@@ -1,0 +1,6 @@
+{
+  "name": "통합건설안전관제시스템",
+  "description": "경기주택도시공사(GH) 건설안전대시보드와 Google Maps 기반의 AI 챗봇을 유기적으로 연동한 실시간 건설안전 관제 포털",
+  "requestFramePermissions": ["geolocation"],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

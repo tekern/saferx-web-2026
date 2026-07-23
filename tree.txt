@@ -1,0 +1,15 @@
+/app/applet
+├── assets/
+├── dist/
+├── index.html
+├── metadata.json
+├── node_modules/
+├── package-lock.json
+├── package.json
+├── server.ts
+├── src/
+├── tsconfig.json
+└── vite.config.ts
+
+directory: 4 file: 7
+
