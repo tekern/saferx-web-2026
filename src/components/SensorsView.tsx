@@ -921,7 +921,7 @@ export default function SensorsView({ currentZoneFilter, navigate, availableZone
         {filteredDevices.length === 0 && (
           <div className="col-span-full py-16 text-center text-text-dim border border-dashed border-border-main rounded-xl flex flex-col items-center justify-center gap-2">
             <WifiOff className="w-8 h-8 text-text-dim" />
-            <p className="text-sm">관측 필터에 부합하는 활성 기기가 등록되어 있지 않습니다.</p>
+            <p className="text-sm">등록된 기기가 없습니다.</p>
           </div>
         )}
       </div>

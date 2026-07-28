@@ -639,7 +639,7 @@ export default function EventsView({
                 <tr>
                   <td colSpan={10} className="p-12 text-center text-[#8A8A96] space-y-2">
                     <CheckCircle className="w-8 h-8 text-[#22C55E] mx-auto" />
-                    <p className="text-sm">검색 조건에 해당하거나 미처리 상태인 이벤트가 존재하지 않습니다.</p>
+                    <p className="text-sm">처리할 이벤트가 없습니다.</p>
                   </td>
                 </tr>
               )}

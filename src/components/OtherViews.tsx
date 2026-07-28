@@ -4,13 +4,14 @@
  */
 
 import React, { useState, useEffect } from "react";
-import { Company, User, TbmItem, SafetyEvent, EventStatus } from "../types";
-import { COMPANIES, USERS, TBM_LIST, ZONES } from "../data";
+import { Company, User, TbmItem, SafetyEvent, EventStatus, Zone, Notice } from "../types";
+import { COMPANIES, USERS, TBM_LIST, ZONES, INIT_NOTICES } from "../data";
 import { 
   Truck, HardHat, ShieldAlert, CheckCircle, BarChart3, Settings, 
   HelpCircle, Printer, Plus, Edit2, ToggleLeft, ToggleRight, Trash2, 
   Volume2, ShieldCheck, Cpu, Database, UserPlus, Info, Lock, ArrowLeft, ArrowRight,
-  Calendar, Clock, Check, X, Filter, Users, FileText, Download
+  Calendar, Clock, Check, X, Filter, Users, FileText, Download, MapPin, AlertTriangle,
+  Megaphone, Building2, Bell, Send, Eye
 } from "lucide-react";
 
 import {
@@ -41,20 +42,52 @@ interface OtherViewsProps {
   events?: SafetyEvent[];
   tbmList: TbmItem[];
   setTbmList: React.Dispatch<React.SetStateAction<TbmItem[]>>;
+  availableZones?: Zone[];
+  currentZoneFilter?: string;
+  zonesList?: Zone[];
+  setZonesList?: React.Dispatch<React.SetStateAction<Zone[]>>;
+  noticesList?: Notice[];
+  setNoticesList?: React.Dispatch<React.SetStateAction<Notice[]>>;
+  companiesList?: Company[];
+  setCompaniesList?: React.Dispatch<React.SetStateAction<Company[]>>;
+  isSiteManager?: boolean;
+  currentUserName?: string;
 }
 
-export default function OtherViews({ currentPage, navigate, events, tbmList, setTbmList }: OtherViewsProps) {
+export default function OtherViews({ 
+  currentPage, 
+  navigate, 
+  events, 
+  tbmList, 
+  setTbmList, 
+  availableZones, 
+  currentZoneFilter, 
+  zonesList, 
+  setZonesList,
+  noticesList,
+  setNoticesList,
+  companiesList,
+  setCompaniesList,
+  isSiteManager,
+  currentUserName
+}: OtherViewsProps) {
   // Page 6: 중장비 경보관리 (heavy)
   if (currentPage === "heavy") {
     return <HeavyMachineryView />;
   }
   // Page 8: TBM 현황 (tbm)
   if (currentPage === "tbm") {
-    return <TBMStatusView tbmList={tbmList} setTbmList={setTbmList} />;
+    return <TBMStatusView tbmList={tbmList} setTbmList={setTbmList} availableZones={availableZones} />;
   }
   // Page 9: 협력사 관리 (companies)
   if (currentPage === "companies") {
-    return <CompaniesView />;
+    return (
+      <CompaniesView 
+        companiesList={companiesList || COMPANIES} 
+        setCompaniesList={setCompaniesList} 
+        availableZones={availableZones || zonesList || ZONES}
+      />
+    );
   }
   // Page 10: 사용자 관리 (users)
   if (currentPage === "users") {
@@ -71,6 +104,22 @@ export default function OtherViews({ currentPage, navigate, events, tbmList, set
   // Page 13: 시스템 설정 (settings)
   if (currentPage === "settings") {
     return <SystemSettingsView />;
+  }
+  // Page 14: 현장 관리 (sites)
+  if (currentPage === "sites") {
+    return <SiteManagementView zonesList={zonesList || availableZones || ZONES} setZonesList={setZonesList} />;
+  }
+  // Page 15: 공지사항 (notice)
+  if (currentPage === "notice") {
+    return (
+      <NoticeManagementView 
+        noticesList={noticesList || INIT_NOTICES} 
+        setNoticesList={setNoticesList} 
+        availableZones={availableZones || zonesList || ZONES}
+        isSiteManager={isSiteManager}
+        currentUserName={currentUserName}
+      />
+    );
   }
 
   return null;
@@ -236,14 +285,18 @@ const SignatureThumbnail = ({ name, onClick }: { name: string; onClick?: () => v
 
 function TBMStatusView({
   tbmList,
-  setTbmList
+  setTbmList,
+  availableZones
 }: {
   tbmList: TbmItem[];
   setTbmList: React.Dispatch<React.SetStateAction<TbmItem[]>>;
+  availableZones?: Zone[];
 }) {
   const [currentView, setCurrentView] = useState<'list' | 'detail'>('list');
   const [activeTbm, setActiveTbm] = useState<any | null>(null);
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+
+  const zoneList = availableZones || ZONES;
 
   // Filter states
   const [filterZone, setFilterZone] = useState<string>("ALL");
@@ -252,7 +305,7 @@ function TBMStatusView({
   const [filterStatus, setFilterStatus] = useState<string>("ALL"); // ALL, BEFORE, COMPLETED
 
   // Creation Modal states
-  const [newZone, setNewZone] = useState("왕숙1구역");
+  const [newZone, setNewZone] = useState(() => zoneList[0]?.name || "왕숙1구역");
   const [newDate, setNewDate] = useState(() => {
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -311,7 +364,11 @@ function TBMStatusView({
 
   // TBM List Filtering Logic
   const filteredTbmList = tbmList.filter(item => {
-    if (filterZone !== "ALL" && item.zone !== filterZone) return false;
+    if (filterZone !== "ALL") {
+      if (item.zone !== filterZone && item.zoneId !== filterZone) return false;
+    } else {
+      if (!zoneList.some(z => z.id === item.zoneId || z.name === item.zone)) return false;
+    }
     if (filterStartDate && item.date < filterStartDate) return false;
     if (filterEndDate && item.date > filterEndDate) return false;
     if (filterStatus !== "ALL") {
@@ -500,9 +557,9 @@ function TBMStatusView({
                 className="w-full bg-[#222226] border border-[#333338] text-text-main py-2 px-3 rounded-lg focus:border-cyan outline-none transition-all"
               >
                 <option value="ALL">전체 구역</option>
-                <option value="왕숙1구역">왕숙1구역</option>
-                <option value="왕숙2구역">왕숙2구역</option>
-                <option value="왕숙3구역">왕숙3구역</option>
+                {zoneList.map(z => (
+                  <option key={z.id} value={z.name}>{z.name}</option>
+                ))}
               </select>
             </div>
 
@@ -575,7 +632,7 @@ function TBMStatusView({
                   {filteredTbmList.length === 0 ? (
                     <tr>
                       <td colSpan={8} className="p-10 text-center text-text-dim text-[11px]">
-                        일치하는 TBM 보고서가 존재하지 않습니다.
+                        등록된 TBM이 없습니다.
                       </td>
                     </tr>
                   ) : (
@@ -1405,83 +1462,315 @@ function TBMStatusView({
   );
 }
 
-// 🏗 PAGE 9: Sub-contractor Lists Rating sheets
-function CompaniesView() {
-  const [selectedComp, setSelectedComp] = useState<Company | null>(null);
+// 🏗 PAGE 9: Sub-contractor Management View (협력사 관리)
+function CompaniesView({
+  companiesList,
+  setCompaniesList,
+  availableZones
+}: {
+  companiesList: Company[];
+  setCompaniesList?: React.Dispatch<React.SetStateAction<Company[]>>;
+  availableZones?: Zone[];
+}) {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [deletingCompany, setDeletingCompany] = useState<Company | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Form state
+  const [name, setName] = useState("");
+  const [selectedZones, setSelectedZones] = useState<string[]>([]);
+  const [pm, setPm] = useState("");
+  const [tel, setTel] = useState("");
+  const [category, setCategory] = useState("철근/콘크리트");
+
+  const zones = availableZones || ZONES;
+
+  const handleOpenAdd = () => {
+    setName("");
+    setSelectedZones(zones.length > 0 ? [zones[0].name] : ["왕숙1구역"]);
+    setPm("");
+    setTel("");
+    setCategory("철근/콘크리트");
+    setErrorMsg("");
+    setShowAddModal(true);
+  };
+
+  const handleZoneToggle = (zoneName: string) => {
+    setSelectedZones(prev =>
+      prev.includes(zoneName)
+        ? prev.filter(z => z !== zoneName)
+        : [...prev, zoneName]
+    );
+  };
+
+  const handleCreateCompany = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!name.trim()) {
+      setErrorMsg("협력사명을 입력해 주세요.");
+      return;
+    }
+    if (selectedZones.length === 0) {
+      setErrorMsg("담당 구역을 최소 1개 이상 선택해 주세요.");
+      return;
+    }
+    if (!pm.trim()) {
+      setErrorMsg("대표자 이름을 입력해 주세요.");
+      return;
+    }
+    if (!tel.trim()) {
+      setErrorMsg("연락처를 입력해 주세요.");
+      return;
+    }
+
+    const newCompany: Company = {
+      id: `c-${Date.now()}`,
+      name: name.trim(),
+      zones: selectedZones,
+      pm: pm.trim(),
+      tel: tel.trim(),
+      workers: Math.floor(Math.random() * 80) + 40,
+      category: category.trim() || "기타",
+      status: "운영중",
+      rating: "A",
+      safetyMgr: `${pm.trim().slice(0, 1)}안전`
+    };
+
+    if (setCompaniesList) {
+      setCompaniesList(prev => [newCompany, ...prev]);
+    }
+    setShowAddModal(false);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletingCompany && setCompaniesList) {
+      setCompaniesList(prev => prev.filter(c => c.id !== deletingCompany.id));
+    }
+    setDeletingCompany(null);
+  };
 
   return (
-    <div className="space-y-4 page-transition">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {COMPANIES.map((c) => (
-          <div
-            key={c.id}
-            onClick={() => setSelectedComp(c)}
-            className="bg-card border border-border-main hover:border-cyan/70 p-4 rounded-xl cursor-pointer hover:shadow-lg transition-all flex flex-col justify-between space-y-3"
-          >
-            <div className="flex items-start justify-between">
-              <div>
-                <h5 className="font-bold text-sm text-text-main">{c.name} (건설파트너)</h5>
-                <p className="text-[10px] text-text-dim mt-0.5">PM 소장: {c.pm} ({c.tel})</p>
-              </div>
-              <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                c.rating === "A" ? "bg-green/10 text-green" : "bg-orange/10 text-orange"
-              }`}>
-                {c.rating} 등급
-              </span>
-            </div>
-
-            <div className="text-xs bg-outer/70 p-2.5 rounded border border-border-dim space-y-1">
-              <div className="flex justify-between">
-                <span className="text-text-sub">지정 배후 현장:</span>
-                <span className="text-text-main font-bold">{c.zones.join(", ")}</span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-text-sub">금일 투입 총원수:</span>
-                <span className="text-cyan font-bold font-mono">{c.workers}명</span>
-              </div>
-            </div>
-
-            <div className="flex justify-between text-[10px] text-text-dim pt-1 border-t border-border-dim/40">
-              <span>수석 안전부장: {c.safetyMgr}</span>
-              <span className="text-cyan underline">상세보기 🔍</span>
-            </div>
-          </div>
-        ))}
+    <div className="space-y-4 page-transition font-sans text-[#ECECEC]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-[#ECECEC] flex items-center gap-2">
+          <Building2 className="w-5 h-5 text-[#00D1E8]" />
+          협력사 관리
+        </h2>
+        <button
+          onClick={handleOpenAdd}
+          className="bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-black font-bold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+        >
+          <Plus className="w-4 h-4" /> 협력사 등록
+        </button>
       </div>
 
-      {/* Company details drawer modal */}
-      {selectedComp && (
-        <div className="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-panel border border-border-main w-full max-w-sm rounded-xl p-5 space-y-4">
-            <h4 className="font-bold text-sm text-text-main border-b border-border-main pb-2">
-              {selectedComp.name} 파트너 신인도 진단 시트
-            </h4>
+      {/* Table Card */}
+      <div className="bg-[#222226] border border-border-main rounded-xl p-4">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-[#ECECEC]">
+            <thead>
+              <tr className="border-b border-border-main text-[#8A8A96] text-[11px] uppercase tracking-wider font-semibold">
+                <th className="p-3">협력사명</th>
+                <th className="p-3">담당 구역</th>
+                <th className="p-3">대표자</th>
+                <th className="p-3">연락처</th>
+                <th className="p-3">소속 인원 수</th>
+                <th className="p-3">상태</th>
+                <th className="p-3 text-right">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-main/50">
+              {companiesList.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-[#8A8A96]">
+                    등록된 협력사가 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                companiesList.map((c) => (
+                  <tr key={c.id} className="hover:bg-[#2A2A2F] transition-colors">
+                    <td className="p-3 font-bold text-[#ECECEC]">
+                      {c.name}
+                      {c.category && (
+                        <span className="ml-2 text-[10px] font-normal text-[#8A8A96] bg-[#111113] px-1.5 py-0.5 rounded border border-border-main/40">
+                          {c.category}
+                        </span>
+                      )}
+                    </td>
+                    <td className="p-3 text-[#ECECEC] font-medium">
+                      {Array.isArray(c.zones) ? c.zones.join(", ") : c.zones}
+                    </td>
+                    <td className="p-3 text-[#ECECEC]">{c.pm || "-"}</td>
+                    <td className="p-3 text-[#8A8A96] font-mono">{c.tel || "-"}</td>
+                    <td className="p-3 font-mono text-[#00D1E8] font-bold">{c.workers}명</td>
+                    <td className="p-3">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/30">
+                        {c.status || "운영중"}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => setDeletingCompany(c)}
+                        title="협력사 삭제"
+                        className="p-1.5 text-[#EF4444] hover:bg-[#EF4444]/10 rounded-lg transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
 
-            <div className="space-y-2.5 text-xs leading-relaxed">
-              <div className="flex justify-between text-[11px]">
-                <span className="text-text-sub">종합 안전 지휘 등급:</span>
-                <span className="text-green font-bold">{selectedComp.rating}등급 (안전우수)</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-text-sub">안전 관리관 전원 배치율:</span>
-                <span className="text-text-main font-mono">100% 매칭 완료</span>
-              </div>
-              <div className="flex justify-between text-[11px]">
-                <span className="text-text-sub">TBM 현황 (최근 7일 종합):</span>
-                <span className="text-cyan font-bold font-mono">98.2% 완수</span>
-              </div>
-              
-              <div className="bg-card p-2.5 border border-border-dim rounded text-[10px] text-text-sub">
-                - 최근 180일간 낙석, 타워크레인 근처 충돌 감지, 질식 유해 알림 기록 0건 단속 유지인 현장입니다.
-              </div>
+      {/* 협력사 등록 모달 */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] backdrop-blur-sm p-4">
+          <div className="bg-[#222226] border border-[#333338] text-[#ECECEC] rounded-xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border-main pb-3">
+              <h3 className="text-base font-bold text-[#ECECEC] flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-[#00D1E8]" /> 협력사 등록
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-[#8A8A96] hover:text-[#ECECEC]"
+              >
+                <X className="w-4 h-4" />
+              </button>
             </div>
 
-            <button
-              onClick={() => setSelectedComp(null)}
-              className="w-full py-2 bg-hover hover:bg-hover/80 text-xs font-bold text-text-main rounded-lg"
-            >
-              닫기
-            </button>
+            <form onSubmit={handleCreateCompany} className="space-y-3.5 text-xs">
+              {errorMsg && (
+                <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-[#EF4444] font-bold text-[11px]">
+                  {errorMsg}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[#8A8A96] mb-1 font-semibold">
+                  협력사명 <span className="text-[#EF4444]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="예: 현대건설"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#8A8A96] mb-1.5 font-semibold">
+                  담당 구역 <span className="text-[#EF4444]">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2 max-h-36 overflow-y-auto p-2 bg-[#111113] border border-border-main rounded-lg">
+                  {zones.map((z) => (
+                    <label key={z.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-[#2A2A2F]">
+                      <input
+                        type="checkbox"
+                        checked={selectedZones.includes(z.name)}
+                        onChange={() => handleZoneToggle(z.name)}
+                        className="accent-[#00D1E8] w-3.5 h-3.5"
+                      />
+                      <span className="text-xs text-[#ECECEC]">{z.name}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8A8A96] mb-1 font-semibold">
+                    대표자 이름 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="예: 홍길동"
+                    value={pm}
+                    onChange={(e) => setPm(e.target.value)}
+                    className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#8A8A96] mb-1 font-semibold">
+                    연락처 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="예: 02-1234-5678"
+                    value={tel}
+                    onChange={(e) => setTel(e.target.value)}
+                    className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[#8A8A96] mb-1 font-semibold">
+                  업종 <span className="text-[#8A8A96] font-normal">(선택, 예: 철근/콘크리트/전기/기계)</span>
+                </label>
+                <input
+                  type="text"
+                  placeholder="예: 철근/콘크리트"
+                  value={category}
+                  onChange={(e) => setCategory(e.target.value)}
+                  className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border-main">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 bg-[#2A2A2F] hover:bg-[#2A2A2F]/80 text-[#ECECEC] rounded-lg font-bold transition-all cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-black rounded-lg font-bold transition-all cursor-pointer"
+                >
+                  등록
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 협력사 삭제 확인 모달 */}
+      {deletingCompany && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] backdrop-blur-sm p-4">
+          <div className="bg-[#222226] border border-[#333338] text-[#ECECEC] rounded-xl p-6 w-full max-w-sm space-y-4 shadow-2xl text-center">
+            <div className="w-12 h-12 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-full flex items-center justify-center mx-auto text-[#EF4444]">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-[#ECECEC]">협력사 삭제</h3>
+              <p className="text-xs text-[#8A8A96]">
+                협력사를 삭제하면 관련 데이터가 모두 제거됩니다.
+              </p>
+            </div>
+            <div className="flex justify-center gap-2 pt-2">
+              <button
+                onClick={() => setDeletingCompany(null)}
+                className="px-4 py-2 bg-[#2A2A2F] hover:bg-[#2A2A2F]/80 text-[#ECECEC] rounded-lg font-bold text-xs transition-all cursor-pointer"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-[#EF4444] hover:bg-[#EF4444]/90 text-white rounded-lg font-bold text-xs transition-all cursor-pointer"
+              >
+                삭제
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -1497,7 +1786,7 @@ function UsersManagementView() {
   // Users template addition form parameters
   const [newLoginId, setNewLoginId] = useState("");
   const [newName, setNewName] = useState("");
-  const [newRole, setNewRole] = useState<'GH_ADMIN' | 'SITE_MGR' | 'SAFETY' | 'VIEWER'>("SITE_MGR");
+  const [newRole, setNewRole] = useState<'SUPER_ADMIN' | 'SITE_MGR' | 'SAFETY' | 'VIEWER'>("SITE_MGR");
   const [newDept, setNewDept] = useState("현대건설");
   const [newTel, setNewTel] = useState("");
 
@@ -1538,12 +1827,10 @@ function UsersManagementView() {
       case "SUPER_ADMIN":
         classes = "bg-[rgba(239,68,68,0.10)] text-[#EF4444] border border-[rgba(239,68,68,0.20)]";
         break;
-      case "GH_ADMIN":
-      case "TENANT_ADMIN":
+      case "SYS_ADMIN":
         classes = "bg-[rgba(0,209,232,0.10)] text-[#00D1E8] border border-[rgba(0,209,232,0.20)]";
         break;
       case "SITE_MGR":
-      case "SITE_MANAGER":
         classes = "bg-[rgba(245,158,11,0.10)] text-[#F59E0B] border border-[rgba(245,158,11,0.20)]";
         break;
       case "SITE_DIRECTOR":
@@ -1673,7 +1960,7 @@ function UsersManagementView() {
                     onChange={(e: any) => setNewRole(e.target.value)}
                     className="w-full bg-outer border border-border-main p-2 rounded text-text-main focus:outline-none"
                   >
-                    <option value="GH_ADMIN">GH_ADMIN</option>
+                    <option value="SUPER_ADMIN">SUPER_ADMIN</option>
                     <option value="SITE_MGR">SITE_MGR</option>
                     <option value="SAFETY">SAFETY</option>
                     <option value="VIEWER">VIEWER</option>
@@ -2060,7 +2347,7 @@ function AIAnalysisView({
     switch (status) {
       case "ACTIVE": return "미처리";
       case "CONFIRMED": return "처리완료";
-      case "SNOOZED": return "감지유예";
+      case "SNOOZED": return "보류";
       case "PENDING": return "보류";
       default: return status;
     }
@@ -2453,17 +2740,13 @@ function SystemSettingsView() {
       ["로그인", "관리자 계정 바로가기", "Quick Admin Login", "로그인 하단", "빠른 접속 링크"],
       ["로그인", "계정이 없으신가요? 회원가입", "Sign Up Now", "로그인 하단", "화면 전환 링크"],
       ["대시보드", "남양주 왕숙 수치 지형도(GIS)", "Namyangju Wangsuk GIS Map", "메인 대시보드 중앙", "지도 영역 타이틀"],
-      ["대시보드", "장비 가동 현황", "Equipment Status", "대시보드 우측", "장비 관제 패널"],
       ["대시보드", "기상 정보", "Weather Info", "대시보드 우측 상단", "실시간 대기 환경 지표"],
-      ["대시보드", "스마트 태그 수", "Smart Tag Count", "대시보드 상단", "지표 요약"],
       ["대시보드", "위험 이벤트 감지", "Risk Event Detection", "대시보드 좌측", "경보 알림"],
-      ["대시보드", "실시간 공정률", "Project Progress Rate", "대시보드 중앙 하단", "차트 및 통계"],
-      ["대시보드", "협력업체 현황", "Subcontractor Status", "대시보드 좌측 하단", "테이블 요약"],
+      ["대시보드", "협력사 현황", "Subcontractor Status", "대시보드 좌측 하단", "테이블 요약"],
       ["CCTV 관제", "실시간 CCTV 스트리밍", "Real-time CCTV Streaming", "CCTV 관제 화면", "CCTV 리스트 타이틀"],
-      ["CCTV 관제", "PTZ 제어", "PTZ Control", "CCTV 개별 그리드", "CCTV 원격 제어판"],
       ["CCTV 관제", "녹화 재생", "Playback", "CCTV 하단", "과거 기록 분석"],
       ["CCTV 관제", "CCTV 채널 선택", "CCTV Channel Selection", "CCTV 사이드바", "선택 가이드"],
-      ["CCTV 관제", "지능형 객체 감지", "AI Object Detection", "CCTV 오버레이", "안전 수칙 미준수 감지"],
+      ["CCTV 관제", "AI 감지", "AI Object Detection", "CCTV 오버레이", "안전 수칙 미준수 감지"],
       ["센서 모니터링", "가스 감지 센서", "Gas Detection Sensor", "센서 종합 화면", "센서 유형 타이틀"],
       ["센서 모니터링", "일산화탄소 농도", "CO Concentration", "밀폐공간 계측기", "센서 상세 지표"],
       ["센서 모니터링", "임계값 초과 경보", "Threshold Alarm", "알람 이력", "이벤트 알람 상태"],
@@ -2472,16 +2755,12 @@ function SystemSettingsView() {
       ["근로자 관리", "근로자 위치 관제", "Worker Location Tracking", "근로자 현황판", "실시간 위치 추적"],
       ["근로자 관리", "안전모 착용 상태", "Helmet Wearing Status", "AI 분석 패널", "안전 미준수 검출"],
       ["근로자 관리", "비상 호출 SOS", "Emergency SOS Call", "모바일/태그 알림", "긴급 SOS 알람"],
-      ["근로자 관리", "출퇴근 현황", "Attendance Log", "근로자 탭", "투입 인원 분석"],
+      ["근로자 관리", "출근 현황", "Attendance Log", "근로자 탭", "투입 인원 분석"],
       ["일일 보고서", "건설안전종합 일일보고서", "Daily Construction Safety Report", "보고서 출력 화면", "공식 문서 양식"],
       ["일일 보고서", "출력일자", "Export Date", "일일 보고서 우측 상단", "인쇄용 메타데이터"],
       ["일일 보고서", "안전 점검 일지", "Safety Inspection Log", "보고서 본문", "종합 결재 서식"],
       ["일일 보고서", "금일 조치사항", "Actions Taken Today", "보고서 본문 하단", "텍스트 영역"],
-      ["일일 보고서", "명일 안전 계획", "Safety Plan for Tomorrow", "보고서 본문 하단", "텍스트 영역"],
-      ["AI 안전 비서", "AI 안전관제 어시스턴트", "AI Safety Assistant", "챗봇 사이드바", "챗봇 윈도우 타이틀"],
-      ["AI 안전 비서", "추천 질문", "Suggested Questions", "챗봇 웰컴 가이드", "빠른 질문 바로가기"],
-      ["AI 안전 비서", "지도 연동 및 그라운딩", "Maps Grounding Link", "챗봇 답변 하단", "참조 링크 및 좌표 정보"],
-      ["AI 안전 비서", "SOP 비상 대처 가이드", "SOP Emergency Guide", "챗봇 답변 영역", "안전 대응 가이드라인"]
+      ["일일 보고서", "명일 안전 계획", "Safety Plan for Tomorrow", "보고서 본문 하단", "텍스트 영역"]
     ];
 
     const csvContent = "\uFEFF" + [
@@ -2551,12 +2830,12 @@ function SystemSettingsView() {
             </span>
             <input
               type="password"
-              placeholder="현재 암호 확인"
+              placeholder="현재 비밀번호"
               className="w-full bg-outer border border-border-main p-2 rounded text-text-main focus:outline-none text-xs placeholder-text-dim"
             />
             <input
               type="password"
-              placeholder="변경할 핵심 암호"
+              placeholder="새 비밀번호"
               className="w-full bg-outer border border-border-main p-2 rounded text-text-main focus:outline-none text-xs placeholder-text-dim"
             />
           </div>
@@ -2571,7 +2850,7 @@ function SystemSettingsView() {
 
         {saveComplete && (
           <div className="bg-green/10 border border-green/30 p-2 rounded text-[11px] text-green text-center font-bold">
-            ✓ 관제 환경 설정 보정 변경 사항 저장 완료.
+            ✓ 설정이 저장되었습니다.
           </div>
         )}
       </form>
@@ -2594,6 +2873,782 @@ function SystemSettingsView() {
           <span>UI 용어사전 Excel(.CSV) 다운로드</span>
         </button>
       </div>
+    </div>
+  );
+}
+
+// 🏗️ PAGE 14: Site Management View
+function SiteManagementView({
+  zonesList,
+  setZonesList
+}: {
+  zonesList: Zone[];
+  setZonesList?: React.Dispatch<React.SetStateAction<Zone[]>>;
+}) {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [deletingZone, setDeletingZone] = useState<Zone | null>(null);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Form states
+  const [form, setForm] = useState({
+    name: "",
+    company: "현대건설",
+    pm: "",
+    tel: "",
+    lat: "37.6478",
+    lng: "127.2156"
+  });
+
+  const handleOpenAddModal = () => {
+    setForm({
+      name: "",
+      company: "현대건설",
+      pm: "",
+      tel: "",
+      lat: "37.6478",
+      lng: "127.2156"
+    });
+    setErrorMsg("");
+    setShowAddModal(true);
+  };
+
+  const handleCreateSite = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.name.trim() || !form.company || !form.pm.trim() || !form.tel.trim() || !form.lat || !form.lng) {
+      setErrorMsg("모든 필수 항목을 입력해 주세요.");
+      return;
+    }
+
+    const latNum = parseFloat(form.lat);
+    const lngNum = parseFloat(form.lng);
+
+    if (isNaN(latNum) || isNaN(lngNum)) {
+      setErrorMsg("위도와 경도는 올바른 숫자여야 합니다.");
+      return;
+    }
+
+    const newZone: Zone = {
+      id: `z-${Date.now()}`,
+      name: form.name.trim(),
+      company: form.company,
+      lat: latNum,
+      lng: lngNum,
+      workers: 0,
+      risk: 0.0,
+      events: 0,
+      status: "보통",
+      pm: form.pm.trim(),
+      tel: form.tel.trim()
+    };
+
+    if (setZonesList) {
+      setZonesList(prev => [...prev, newZone]);
+    }
+    setShowAddModal(false);
+  };
+
+  const handleDeleteConfirm = () => {
+    if (deletingZone && setZonesList) {
+      setZonesList(prev => prev.filter(z => z.id !== deletingZone.id));
+    }
+    setDeletingZone(null);
+  };
+
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case "위험":
+        return "bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30";
+      case "주의":
+        return "bg-amber-500/10 text-amber-500 border border-amber-500/30";
+      default:
+        return "bg-emerald-500/10 text-emerald-500 border border-emerald-500/30";
+    }
+  };
+
+  return (
+    <div className="space-y-4 page-transition font-sans text-[#ECECEC]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-[#ECECEC] flex items-center gap-2">
+          <MapPin className="w-5 h-5 text-[#00D1E8]" />
+          현장 관리
+        </h2>
+        <button
+          onClick={handleOpenAddModal}
+          className="bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-black font-bold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+        >
+          <Plus className="w-4 h-4" /> 현장 등록
+        </button>
+      </div>
+
+      {/* Table Card */}
+      <div className="bg-[#222226] border border-border-main rounded-xl p-4">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-[#ECECEC]">
+            <thead>
+              <tr className="border-b border-border-main text-[#8A8A96] text-[11px] uppercase tracking-wider font-semibold">
+                <th className="p-3">현장명</th>
+                <th className="p-3">시공사</th>
+                <th className="p-3">PM</th>
+                <th className="p-3">연락처</th>
+                <th className="p-3">작업자 수</th>
+                <th className="p-3">상태</th>
+                <th className="p-3 text-right">관리</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-main/50">
+              {zonesList.length === 0 ? (
+                <tr>
+                  <td colSpan={7} className="p-8 text-center text-[#8A8A96]">
+                    등록된 현장이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                zonesList.map((z) => (
+                  <tr key={z.id} className="hover:bg-[#2A2A2F] transition-colors">
+                    <td className="p-3 font-bold text-[#ECECEC]">{z.name}</td>
+                    <td className="p-3 text-[#ECECEC]">{z.company}</td>
+                    <td className="p-3 text-[#ECECEC]">{z.pm || "-"}</td>
+                    <td className="p-3 text-[#8A8A96] font-mono">{z.tel || "-"}</td>
+                    <td className="p-3 font-mono text-[#ECECEC]">{z.workers}명</td>
+                    <td className="p-3">
+                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${getStatusBadge(z.status)}`}>
+                        {z.status}
+                      </span>
+                    </td>
+                    <td className="p-3 text-right">
+                      <button
+                        onClick={() => setDeletingZone(z)}
+                        title="현장 삭제"
+                        className="p-1.5 text-[#EF4444] hover:bg-[#EF4444]/10 rounded-lg transition-all cursor-pointer"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 현장 등록 모달 */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] backdrop-blur-sm p-4">
+          <div className="bg-[#222226] border border-[#333338] text-[#ECECEC] rounded-xl p-6 w-full max-w-md space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border-main pb-3">
+              <h3 className="text-base font-bold text-[#ECECEC] flex items-center gap-2">
+                <MapPin className="w-4 h-4 text-[#00D1E8]" /> 현장 등록
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-[#8A8A96] hover:text-[#ECECEC]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleCreateSite} className="space-y-3.5 text-xs">
+              {errorMsg && (
+                <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-[#EF4444] font-bold text-[11px]">
+                  {errorMsg}
+                </div>
+              )}
+
+              <div>
+                <label className="block text-[#8A8A96] mb-1 font-semibold">
+                  현장명 <span className="text-[#EF4444]">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="예: 왕숙14구역"
+                  value={form.name}
+                  onChange={(e) => setForm({ ...form, name: e.target.value })}
+                  className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                />
+              </div>
+
+              <div>
+                <label className="block text-[#8A8A96] mb-1 font-semibold">
+                  시공사 <span className="text-[#EF4444]">*</span>
+                </label>
+                <select
+                  value={form.company}
+                  onChange={(e) => setForm({ ...form, company: e.target.value })}
+                  className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                >
+                  <option value="현대건설">현대건설</option>
+                  <option value="삼성물산">삼성물산</option>
+                  <option value="대우건설">대우건설</option>
+                  <option value="GS건설">GS건설</option>
+                  <option value="기타">기타</option>
+                </select>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8A8A96] mb-1 font-semibold">
+                    PM 이름 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="예: 김관수"
+                    value={form.pm}
+                    onChange={(e) => setForm({ ...form, pm: e.target.value })}
+                    className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#8A8A96] mb-1 font-semibold">
+                    PM 연락처 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="예: 010-1234-5678"
+                    value={form.tel}
+                    onChange={(e) => setForm({ ...form, tel: e.target.value })}
+                    className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[#8A8A96] mb-1 font-semibold">
+                    위도 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    placeholder="예: 37.6478"
+                    value={form.lat}
+                    onChange={(e) => setForm({ ...form, lat: e.target.value })}
+                    className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8] font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[#8A8A96] mb-1 font-semibold">
+                    경도 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <input
+                    type="number"
+                    step="0.0001"
+                    required
+                    placeholder="예: 127.2156"
+                    value={form.lng}
+                    onChange={(e) => setForm({ ...form, lng: e.target.value })}
+                    className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8] font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-border-main">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 bg-[#2A2A2F] hover:bg-[#2A2A2F]/80 text-[#ECECEC] rounded-lg font-bold transition-all cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-black rounded-lg font-bold transition-all cursor-pointer"
+                >
+                  등록
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 현장 삭제 확인 모달 */}
+      {deletingZone && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] backdrop-blur-sm p-4">
+          <div className="bg-[#222226] border border-[#333338] text-[#ECECEC] rounded-xl p-6 w-full max-w-sm space-y-4 shadow-2xl text-center">
+            <div className="w-12 h-12 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-full flex items-center justify-center mx-auto text-[#EF4444]">
+              <AlertTriangle className="w-6 h-6" />
+            </div>
+            <div className="space-y-1">
+              <h3 className="text-base font-bold text-[#ECECEC]">현장 삭제</h3>
+              <p className="text-xs text-[#8A8A96]">
+                현장을 삭제하면 관련 데이터가 모두 제거됩니다.
+              </p>
+            </div>
+            <div className="flex justify-center gap-2 pt-2">
+              <button
+                onClick={() => setDeletingZone(null)}
+                className="px-4 py-2 bg-[#2A2A2F] hover:bg-[#2A2A2F]/80 text-[#ECECEC] rounded-lg font-bold text-xs transition-all cursor-pointer"
+              >
+                취소
+              </button>
+              <button
+                onClick={handleDeleteConfirm}
+                className="px-4 py-2 bg-[#EF4444] hover:bg-[#EF4444]/90 text-white rounded-lg font-bold text-xs transition-all cursor-pointer"
+              >
+                삭제
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+// 📢 PAGE 15: Notice Management View (공지사항)
+function NoticeManagementView({
+  noticesList,
+  setNoticesList,
+  availableZones,
+  isSiteManager,
+  currentUserName
+}: {
+  noticesList: Notice[];
+  setNoticesList?: React.Dispatch<React.SetStateAction<Notice[]>>;
+  availableZones?: Zone[];
+  isSiteManager?: boolean;
+  currentUserName?: string;
+}) {
+  const [selectedNotice, setSelectedNotice] = useState<Notice | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [errorMsg, setErrorMsg] = useState("");
+
+  // Form states
+  const [title, setTitle] = useState("");
+  const [content, setContent] = useState("");
+  const [targetType, setTargetType] = useState<'ALL' | 'ZONES'>('ALL');
+  const [selectedZones, setSelectedZones] = useState<string[]>([]);
+  const [importance, setImportance] = useState<'NORMAL' | 'IMPORTANT'>('NORMAL');
+
+  const zones = availableZones || ZONES;
+
+  const handleOpenAdd = () => {
+    setTitle("");
+    setContent("");
+    setTargetType("ALL");
+    setSelectedZones(zones.length > 0 ? [zones[0].name] : ["왕숙1구역"]);
+    setImportance("NORMAL");
+    setErrorMsg("");
+    setShowAddModal(true);
+  };
+
+  const handleZoneToggle = (zoneName: string) => {
+    setSelectedZones(prev =>
+      prev.includes(zoneName)
+        ? prev.filter(z => z !== zoneName)
+        : [...prev, zoneName]
+    );
+  };
+
+  // Pre-submit validates inputs then opens confirmation modal
+  const handlePreSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!title.trim()) {
+      setErrorMsg("제목을 입력해 주세요.");
+      return;
+    }
+    if (!content.trim()) {
+      setErrorMsg("내용을 입력해 주세요.");
+      return;
+    }
+    if (targetType === "ZONES" && selectedZones.length === 0) {
+      setErrorMsg("특정 구역을 최소 1개 이상 선택해 주세요.");
+      return;
+    }
+    setErrorMsg("");
+    setShowConfirmModal(true);
+  };
+
+  // Final creation after confirmation modal
+  const handleFinalCreate = () => {
+    const authorName = currentUserName ? `${currentUserName} (SUPER_ADMIN)` : "김관수 (SUPER_ADMIN)";
+    const newNotice: Notice = {
+      id: `N-${String(Date.now()).slice(-4)}`,
+      title: title.trim(),
+      content: content.trim(),
+      author: authorName,
+      targetType,
+      targetZones: targetType === "ZONES" ? selectedZones : [],
+      importance,
+      createdAt: new Date().toISOString().replace('T', ' ').slice(0, 16),
+      status: "SENT",
+      readCount: 0,
+      totalCount: targetType === "ALL" ? 50 : (selectedZones.length * 10)
+    };
+
+    if (setNoticesList) {
+      setNoticesList(prev => [newNotice, ...prev]);
+    }
+
+    setShowConfirmModal(false);
+    setShowAddModal(false);
+  };
+
+  const handleDeleteNotice = (id: string) => {
+    if (setNoticesList) {
+      setNoticesList(prev => prev.filter(n => n.id !== id));
+    }
+    setSelectedNotice(null);
+  };
+
+  return (
+    <div className="space-y-4 page-transition font-sans text-[#ECECEC]">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-lg font-bold text-[#ECECEC] flex items-center gap-2">
+          <Megaphone className="w-5 h-5 text-[#00D1E8]" />
+          공지사항
+        </h2>
+        {!isSiteManager && (
+          <button
+            onClick={handleOpenAdd}
+            className="bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-black font-bold px-3.5 py-2 rounded-lg text-xs flex items-center gap-1.5 transition-all cursor-pointer shadow-md"
+          >
+            <Plus className="w-4 h-4" /> 공지 등록
+          </button>
+        )}
+      </div>
+
+      {/* Table Card */}
+      <div className="bg-[#222226] border border-border-main rounded-xl p-4">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs text-[#ECECEC]">
+            <thead>
+              <tr className="border-b border-border-main text-[#8A8A96] text-[11px] uppercase tracking-wider font-semibold">
+                <th className="p-3 w-16 text-center">번호</th>
+                <th className="p-3">제목</th>
+                <th className="p-3 w-36">작성자</th>
+                <th className="p-3 w-36">수신 대상</th>
+                <th className="p-3 w-36 font-mono">등록일시</th>
+                <th className="p-3 w-24 text-center">상태</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-border-main/50">
+              {noticesList.length === 0 ? (
+                <tr>
+                  <td colSpan={6} className="p-8 text-center text-[#8A8A96]">
+                    등록된 공지사항이 없습니다.
+                  </td>
+                </tr>
+              ) : (
+                noticesList.map((notice, idx) => (
+                  <tr
+                    key={notice.id}
+                    onClick={() => setSelectedNotice(notice)}
+                    className="hover:bg-[#2A2A2F] transition-colors cursor-pointer group"
+                  >
+                    <td className="p-3 text-center text-[#8A8A96] font-mono">
+                      {noticesList.length - idx}
+                    </td>
+                    <td className="p-3 font-semibold text-[#ECECEC] group-hover:text-[#00D1E8] transition-colors">
+                      <div className="flex items-center gap-2">
+                        {notice.importance === "IMPORTANT" && (
+                          <span className="px-1.5 py-0.5 text-[10px] bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30 rounded font-bold shrink-0">
+                            중요
+                          </span>
+                        )}
+                        <span className="truncate">{notice.title}</span>
+                      </div>
+                    </td>
+                    <td className="p-3 text-[#8A8A96]">{notice.author}</td>
+                    <td className="p-3 text-[#ECECEC]">
+                      {notice.targetType === "ALL" ? (
+                        <span className="px-2 py-0.5 rounded bg-[#2A2A2F] text-[11px] text-[#ECECEC]">전체</span>
+                      ) : (
+                        <span className="text-[11px] text-[#00D1E8]">{notice.targetZones?.join(", ") || "구역"}</span>
+                      )}
+                    </td>
+                    <td className="p-3 text-[#8A8A96] font-mono">{notice.createdAt}</td>
+                    <td className="p-3 text-center">
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#22C55E]/10 text-[#22C55E] border border-[#22C55E]/30">
+                        발송완료
+                      </span>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 공지 등록 모달 */}
+      {showAddModal && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] backdrop-blur-sm p-4">
+          <div className="bg-[#222226] border border-[#333338] text-[#ECECEC] rounded-xl p-6 w-full max-w-lg space-y-4 shadow-2xl">
+            <div className="flex items-center justify-between border-b border-border-main pb-3">
+              <h3 className="text-base font-bold text-[#ECECEC] flex items-center gap-2">
+                <Megaphone className="w-4 h-4 text-[#00D1E8]" /> 공지 등록
+              </h3>
+              <button
+                type="button"
+                onClick={() => setShowAddModal(false)}
+                className="text-[#8A8A96] hover:text-[#ECECEC]"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handlePreSubmit} className="space-y-4 text-xs">
+              {errorMsg && (
+                <div className="p-2.5 bg-[#EF4444]/10 border border-[#EF4444]/30 rounded-lg text-[#EF4444] font-bold text-[11px]">
+                  {errorMsg}
+                </div>
+              )}
+
+              {/* 제목 */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[#8A8A96] font-semibold">
+                    제목 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <span className="text-[10px] text-[#8A8A96] font-mono">{title.length}/50</span>
+                </div>
+                <input
+                  type="text"
+                  required
+                  maxLength={50}
+                  placeholder="공지사항 제목을 입력해 주세요. (최대 50자)"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8]"
+                />
+              </div>
+
+              {/* 내용 */}
+              <div>
+                <div className="flex justify-between items-center mb-1">
+                  <label className="text-[#8A8A96] font-semibold">
+                    내용 <span className="text-[#EF4444]">*</span>
+                  </label>
+                  <span className="text-[10px] text-[#8A8A96] font-mono">{content.length}/1000</span>
+                </div>
+                <textarea
+                  required
+                  rows={5}
+                  maxLength={1000}
+                  placeholder="공지사항 내용을 상세히 작성해 주세요. (최대 1,000자)"
+                  value={content}
+                  onChange={(e) => setContent(e.target.value)}
+                  className="w-full bg-[#111113] border border-border-main rounded-lg p-2.5 text-[#ECECEC] outline-none focus:border-[#00D1E8] resize-none leading-relaxed"
+                />
+              </div>
+
+              {/* 수신 대상 */}
+              <div>
+                <label className="block text-[#8A8A96] mb-1.5 font-semibold">수신 대상</label>
+                <div className="flex items-center gap-6 mb-2">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="targetType"
+                      checked={targetType === "ALL"}
+                      onChange={() => setTargetType("ALL")}
+                      className="accent-[#00D1E8]"
+                    />
+                    <span className="text-[#ECECEC] font-medium">전체</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="targetType"
+                      checked={targetType === "ZONES"}
+                      onChange={() => setTargetType("ZONES")}
+                      className="accent-[#00D1E8]"
+                    />
+                    <span className="text-[#ECECEC] font-medium">특정 구역 선택</span>
+                  </label>
+                </div>
+
+                {targetType === "ZONES" && (
+                  <div className="grid grid-cols-2 gap-2 p-2.5 bg-[#111113] border border-border-main rounded-lg max-h-36 overflow-y-auto">
+                    {zones.map((z) => (
+                      <label key={z.id} className="flex items-center gap-2 cursor-pointer p-1 rounded hover:bg-[#2A2A2F]">
+                        <input
+                          type="checkbox"
+                          checked={selectedZones.includes(z.name)}
+                          onChange={() => handleZoneToggle(z.name)}
+                          className="accent-[#00D1E8] w-3.5 h-3.5"
+                        />
+                        <span className="text-xs text-[#ECECEC]">{z.name}</span>
+                      </label>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* 중요도 */}
+              <div>
+                <label className="block text-[#8A8A96] mb-1.5 font-semibold">중요도</label>
+                <div className="flex items-center gap-6">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="importance"
+                      checked={importance === "NORMAL"}
+                      onChange={() => setImportance("NORMAL")}
+                      className="accent-[#00D1E8]"
+                    />
+                    <span className="text-[#ECECEC]">일반</span>
+                  </label>
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="radio"
+                      name="importance"
+                      checked={importance === "IMPORTANT"}
+                      onChange={() => setImportance("IMPORTANT")}
+                      className="accent-[#EF4444]"
+                    />
+                    <span className="text-[#EF4444] font-bold">중요</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Modal footer */}
+              <div className="flex justify-end gap-2 pt-3 border-t border-border-main">
+                <button
+                  type="button"
+                  onClick={() => setShowAddModal(false)}
+                  className="px-4 py-2 bg-[#2A2A2F] hover:bg-[#2A2A2F]/80 text-[#ECECEC] rounded-lg font-bold transition-all cursor-pointer"
+                >
+                  취소
+                </button>
+                <button
+                  type="submit"
+                  className="px-4 py-2 bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-black rounded-lg font-bold transition-all cursor-pointer"
+                >
+                  등록
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 등록 확인 모달 */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[1000] backdrop-blur-sm p-4">
+          <div className="bg-[#222226] border border-[#333338] text-[#ECECEC] rounded-xl p-6 w-full max-w-sm space-y-4 shadow-2xl text-center">
+            <div className="w-12 h-12 bg-[#00D1E8]/10 border border-[#00D1E8]/30 rounded-full flex items-center justify-center mx-auto text-[#00D1E8]">
+              <Send className="w-6 h-6" />
+            </div>
+            <div className="space-y-1.5">
+              <h3 className="text-base font-bold text-[#ECECEC]">공지사항 등록 및 발송</h3>
+              <p className="text-xs text-[#ECECEC] font-medium leading-relaxed">
+                등록 후 수신 대상에게 즉시 발송됩니다.
+              </p>
+            </div>
+            <div className="flex justify-center gap-2 pt-2">
+              <button
+                type="button"
+                onClick={() => setShowConfirmModal(false)}
+                className="px-4 py-2 bg-[#2A2A2F] hover:bg-[#2A2A2F]/80 text-[#ECECEC] rounded-lg font-bold text-xs transition-all cursor-pointer"
+              >
+                취소
+              </button>
+              <button
+                type="button"
+                onClick={handleFinalCreate}
+                className="px-4 py-2 bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-black rounded-lg font-bold text-xs transition-all cursor-pointer"
+              >
+                등록
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 공지 상세 모달 */}
+      {selectedNotice && (
+        <div className="fixed inset-0 bg-black/70 flex items-center justify-center z-[999] backdrop-blur-sm p-4">
+          <div className="bg-[#222226] border border-[#333338] text-[#ECECEC] rounded-xl p-6 w-full max-w-lg space-y-5 shadow-2xl">
+            {/* Header */}
+            <div className="flex items-start justify-between border-b border-border-main pb-3">
+              <div className="space-y-1.5 pr-4">
+                <div className="flex items-center gap-2">
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                    selectedNotice.importance === "IMPORTANT" 
+                      ? "bg-[#EF4444]/10 text-[#EF4444] border border-[#EF4444]/30" 
+                      : "bg-[#8A8A96]/10 text-[#8A8A96] border border-[#8A8A96]/30"
+                  }`}>
+                    {selectedNotice.importance === "IMPORTANT" ? "중요" : "일반"}
+                  </span>
+                  <span className="text-[11px] text-[#8A8A96] font-mono">{selectedNotice.createdAt}</span>
+                </div>
+                <h3 className="text-base font-bold text-[#ECECEC] leading-snug">
+                  {selectedNotice.title}
+                </h3>
+              </div>
+              <button
+                type="button"
+                onClick={() => setSelectedNotice(null)}
+                className="text-[#8A8A96] hover:text-[#ECECEC] shrink-0"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Info bar */}
+            <div className="grid grid-cols-3 gap-2 bg-[#111113] border border-border-main p-3 rounded-lg text-xs">
+              <div>
+                <span className="text-[#8A8A96] block text-[10px]">작성자</span>
+                <span className="font-semibold text-[#ECECEC]">{selectedNotice.author}</span>
+              </div>
+              <div>
+                <span className="text-[#8A8A96] block text-[10px]">수신 대상</span>
+                <span className="font-semibold text-[#ECECEC]">
+                  {selectedNotice.targetType === "ALL" 
+                    ? "전체" 
+                    : selectedNotice.targetZones?.join(", ")}
+                </span>
+              </div>
+              <div>
+                <span className="text-[#8A8A96] block text-[10px]">읽음 현황</span>
+                <span className="font-bold text-[#00D1E8] font-mono">
+                  읽음 {selectedNotice.readCount}명 / 전체 {selectedNotice.totalCount}명
+                </span>
+              </div>
+            </div>
+
+            {/* Notice Body Content */}
+            <div className="p-4 bg-[#111113] border border-border-main rounded-xl text-xs text-[#ECECEC] whitespace-pre-wrap leading-relaxed min-h-[140px] max-h-80 overflow-y-auto">
+              {selectedNotice.content}
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-border-main">
+              {/* 본인 작성 공지 / SUPER_ADMIN일 때 삭제 버튼 제공 */}
+              {(!isSiteManager || selectedNotice.author.includes(currentUserName || "")) ? (
+                <button
+                  type="button"
+                  onClick={() => handleDeleteNotice(selectedNotice.id)}
+                  className="px-3.5 py-2 bg-[#EF4444] hover:bg-[#EF4444]/90 text-white rounded-lg font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer"
+                >
+                  <Trash2 className="w-4 h-4" /> 삭제
+                </button>
+              ) : (
+                <div />
+              )}
+
+              <button
+                type="button"
+                onClick={() => setSelectedNotice(null)}
+                className="px-4 py-2 bg-[#2A2A2F] hover:bg-[#2A2A2F]/80 text-[#ECECEC] rounded-lg font-bold text-xs transition-all cursor-pointer"
+              >
+                닫기
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

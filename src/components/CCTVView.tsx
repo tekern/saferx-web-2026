@@ -132,8 +132,10 @@ export default function CCTVView({ currentZoneFilter, availableZones }: CCTVView
   useEffect(() => {
     if (currentZoneFilter && currentZoneFilter !== "ALL") {
       setActiveZone(currentZoneFilter);
+    } else if (zoneList.length > 0 && !zoneList.some(z => z.id === activeZone)) {
+      setActiveZone(zoneList[0].id);
     }
-  }, [currentZoneFilter]);
+  }, [currentZoneFilter, zoneList, activeZone]);
 
   // Handle active camera resolution based on selections
   const getCameraForSelection = (zone: string, group: string, floor: string, customId?: string): CameraHierarchyItem => {

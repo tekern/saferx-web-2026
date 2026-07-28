@@ -3,12 +3,13 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { Zone, SafetyEvent, Camera, Sensor, CollapseSensor, Company, User, TbmItem, WorkerLoc } from "./types";
+import { Zone, SafetyEvent, Camera, Sensor, CollapseSensor, Company, User, TbmItem, WorkerLoc, Notice } from "./types";
 
 export const MOCK_LOGIN_USERS = [
-  { id: "admin", pw: "gh1234", name: "김관수", role: "GH_ADMIN", zones: "ALL", dept: "GH안전관리센터" },
-  { id: "site1", pw: "site1234", name: "이현장", role: "SITE_MGR", zones: ["z1", "z2"], dept: "현대건설" },
-  { id: "site2", pw: "site2234", name: "박현장", role: "SITE_MGR", zones: ["z3", "z4"], dept: "삼성물산" },
+  { id: "sys01", pw: "1234", name: "홍길동", role: "SYS_ADMIN", company: "그립", dept: "그립", zones: "ALL", tel: "010-1111-0001" },
+  { id: "super01", pw: "1234", name: "김경기", role: "SUPER_ADMIN", company: "GH", dept: "GH", zones: "ALL", tel: "010-2222-0002" },
+  { id: "site01", pw: "1234", name: "이현장", role: "SITE_MGR", company: "현대건설", site: "왕숙1구역", dept: "현대건설", zones: "z1", tel: "010-3333-0003" },
+  { id: "admin", pw: "gh1234", name: "김관수", role: "SUPER_ADMIN", company: "GH", zones: "ALL", dept: "GH안전관리센터", tel: "010-1111-2222" },
 ];
 
 export const ZONES: Zone[] = [
@@ -82,7 +83,7 @@ export const INIT_EVENTS: SafetyEvent[] = [
     result: "탐지",
     sopHistory: [
       { time: "14:15", action: "이벤트 감지", user: "시스템", memo: "" },
-      { time: "14:17", action: "확인 조치 서명", user: "김관수", memo: "" },
+      { time: "14:17", action: "확인 처리", user: "김관수", memo: "" },
     ],
   },
   {
@@ -178,16 +179,58 @@ export const COLLAPSE_SENSORS: CollapseSensor[] = [
 ];
 
 export const COMPANIES: Company[] = [
-  { id: "c1", name: "현대건설", zones: ["z1", "z7"], workers: 275, pm: "홍길동", tel: "02-1234-5678", safetyMgr: "김안전", rating: "A" },
-  { id: "c2", name: "삼성물산", zones: ["z2", "z11"], workers: 176, pm: "김철수", tel: "02-2345-6789", safetyMgr: "박안전", rating: "A" },
-  { id: "c3", name: "대우건설", zones: ["z3"], workers: 115, pm: "이영희", tel: "02-3456-7890", safetyMgr: "정안전", rating: "B" },
-  { id: "c4", name: "GS건설", zones: ["z4", "z12"], workers: 179, pm: "박민수", tel: "02-4567-8901", safetyMgr: "강안전", rating: "B" },
-  { id: "c5", name: "롯데건설", zones: ["z5", "z13"], workers: 314, pm: "최지원", tel: "02-5678-9012", safetyMgr: "윤안전", rating: "A" },
-  { id: "c6", name: "포스코건설", zones: ["z6"], workers: 176, pm: "정수빈", tel: "02-6789-0123", safetyMgr: "임안전", rating: "B" },
+  { id: "c1", name: "현대건설", zones: ["왕숙1구역", "왕숙7구역"], workers: 275, pm: "홍길동", tel: "02-1234-5678", safetyMgr: "김안전", rating: "A", category: "토목/건축", status: "운영중" },
+  { id: "c2", name: "삼성물산", zones: ["왕숙2구역", "왕숙11구역"], workers: 176, pm: "김철수", tel: "02-2345-6789", safetyMgr: "박안전", rating: "A", category: "토목/건축", status: "운영중" },
+  { id: "c3", name: "대우건설", zones: ["왕숙3구역"], workers: 115, pm: "이영희", tel: "02-3456-7890", safetyMgr: "정안전", rating: "B", category: "철근/콘크리트", status: "운영중" },
+  { id: "c4", name: "GS건설", zones: ["왕숙4구역", "왕숙12구역"], workers: 179, pm: "박민수", tel: "02-4567-8901", safetyMgr: "강안전", rating: "B", category: "전기/기계", status: "운영중" },
+  { id: "c5", name: "롯데건설", zones: ["왕숙5구역", "왕숙13구역"], workers: 314, pm: "최지원", tel: "02-5678-9012", safetyMgr: "윤안전", rating: "A", category: "토목/건축", status: "운영중" },
+  { id: "c6", name: "포스코건설", zones: ["왕숙6구역"], workers: 176, pm: "정수빈", tel: "02-6789-0123", safetyMgr: "임안전", rating: "B", category: "철골/설비", status: "운영중" },
+];
+
+export const INIT_NOTICES: Notice[] = [
+  {
+    id: "N-001",
+    title: "태풍 주의보 대비 외곽 차수 및 사면 피복 상태 긴급점검 지시",
+    content: "태풍 북상에 따라 현장 외곽 차수막 및 토사 사면 피복 상태를 즉시 점검하시기 바랍니다. 특히 토사 유출 우려 구역은 방수포 설치 및 배수로 정비를 17:00까지 완료하여 주시기 바랍니다.",
+    author: "김관수 (SUPER_ADMIN)",
+    targetType: "ALL",
+    targetZones: [],
+    importance: "IMPORTANT",
+    createdAt: "2026-07-22 09:00",
+    status: "SENT",
+    readCount: 42,
+    totalCount: 50
+  },
+  {
+    id: "N-002",
+    title: "왕숙1구역 타워크레인 해체 작업 출입 통제 안내",
+    content: "왕숙1구역 타워크레인(TC-02) 해체 작업이 금일 15:00부터 시작됩니다. 인근 작업구역 출입을 엄격히 통제하오니 무전 및 안내요원의 통제에 협조해 주시기 바랍니다.",
+    author: "김관수 (SUPER_ADMIN)",
+    targetType: "ZONES",
+    targetZones: ["왕숙1구역"],
+    importance: "IMPORTANT",
+    createdAt: "2026-07-21 14:20",
+    status: "SENT",
+    readCount: 18,
+    totalCount: 20
+  },
+  {
+    id: "N-003",
+    title: "하절기 뇌심혈관계 질환 예방 및 온열질환 관리 수칙",
+    content: "폭염주의보 발령 시 매 시간 10분 이상 휴식시간을 준수하고, 현장 내 시원한 음수대 및 휴게시설을 이용하도록 작업자 지도 바랍니다.",
+    author: "김관수 (SUPER_ADMIN)",
+    targetType: "ALL",
+    targetZones: [],
+    importance: "NORMAL",
+    createdAt: "2026-07-20 10:15",
+    status: "SENT",
+    readCount: 48,
+    totalCount: 50
+  }
 ];
 
 export const USERS: User[] = [
-  { id: "u1", loginId: "admin", name: "김관수", role: "GH_ADMIN", dept: "GH안전관리센터", zones: "ALL", tel: "010-1111-2222", lastLogin: "2025-05-27 14:30", status: "ACTIVE" },
+  { id: "u1", loginId: "admin", name: "김관수", role: "SUPER_ADMIN", dept: "GH안전관리센터", zones: "ALL", tel: "010-1111-2222", lastLogin: "2025-05-27 14:30", status: "ACTIVE" },
   { id: "u2", loginId: "site1", name: "이현장", role: "SITE_MGR", dept: "현대건설", zones: "z1,z7", tel: "010-2222-3333", lastLogin: "2025-05-27 13:45", status: "ACTIVE" },
   { id: "u3", loginId: "site2", name: "박현장", role: "SITE_MGR", dept: "삼성물산", zones: "z2,z11", tel: "010-3333-4444", lastLogin: "2025-05-27 12:00", status: "ACTIVE" },
   { id: "u4", loginId: "safety1", name: "최안전", role: "SAFETY", dept: "대우건설", zones: "z3", tel: "010-4444-5555", lastLogin: "2025-05-26 18:00", status: "ACTIVE" },
@@ -233,4 +276,29 @@ export const SPA_RANDOM_EVENT_TEMP = [
   { subtype: "화재연기감지", type: "AI", severity: "CRITICAL", desc: "제2자재창고 인근 흰색 연기 감지", camera: "CAM-005" },
   { subtype: "변위이상", type: "DEVICE", severity: "HIGH", desc: "흙막이 인클라인 경사 오차 한계 돌파", camera: null },
   { subtype: "가스누출감지", type: "DEVICE", severity: "CRITICAL", desc: "지하터널 메탄 가스 잔여 2.5% 돌파", camera: null }
+];
+
+export const INIT_CUSTOMERS = [
+  { id: "cust-01", name: "GH 경기주택도시공사", siteCount: 13, contractStatus: "계약중" as const, startDate: "2024-01-01", endDate: "2026-12-31", managerName: "김경기", tel: "031-220-3000", createdAt: "2024-01-01" },
+  { id: "cust-02", name: "한국토지주택공사(LH)", siteCount: 8, contractStatus: "계약중" as const, startDate: "2024-03-15", endDate: "2027-03-14", managerName: "박토지", tel: "055-922-5114", createdAt: "2024-03-15" },
+  { id: "cust-03", name: "현대건설", siteCount: 5, contractStatus: "계약중" as const, startDate: "2024-05-10", endDate: "2026-05-09", managerName: "이현대", tel: "02-746-1114", createdAt: "2024-05-10" },
+  { id: "cust-04", name: "삼성물산", siteCount: 4, contractStatus: "만료예정" as const, startDate: "2023-08-01", endDate: "2026-08-01", managerName: "정삼성", tel: "02-2145-2114", createdAt: "2023-08-01" },
+  { id: "cust-05", name: "대우건설", siteCount: 3, contractStatus: "종료" as const, startDate: "2022-01-01", endDate: "2025-12-31", managerName: "최대우", tel: "02-2288-3114", createdAt: "2022-01-01" },
+];
+
+export const INIT_SYS_DEVICES = [
+  { id: "DEV-CCTV-101", type: "CCTV" as const, customerName: "GH 경기주택도시공사", siteName: "왕숙1구역", zoneName: "A구역 정문", status: "ONLINE" as const, createdAt: "2024-02-10", lastPing: "10초 전", fotaVersion: "v2.4.1" },
+  { id: "DEV-CCTV-102", type: "CCTV" as const, customerName: "GH 경기주택도시공사", siteName: "왕숙1구역", zoneName: "B구역 작업장", status: "ONLINE" as const, createdAt: "2024-02-10", lastPing: "5초 전", fotaVersion: "v2.4.1" },
+  { id: "DEV-SENS-201", type: "IoT센서" as const, customerName: "GH 경기주택도시공사", siteName: "왕숙2구역", zoneName: "C구역 터널", status: "ONLINE" as const, createdAt: "2024-03-01", lastPing: "12초 전", fotaVersion: "v1.8.0" },
+  { id: "DEV-SENS-202", type: "IoT센서" as const, customerName: "현대건설", siteName: "왕숙1구역", zoneName: "흙막이A-1", status: "ONLINE" as const, createdAt: "2024-04-12", lastPing: "3초 전", fotaVersion: "v1.8.0" },
+  { id: "DEV-SAFE-301", type: "무사고기기" as const, customerName: "삼성물산", siteName: "왕숙2구역", zoneName: "정문 출입구", status: "ONLINE" as const, createdAt: "2024-05-20", lastPing: "1분 전", fotaVersion: "v3.0.2" },
+  { id: "DEV-CCTV-103", type: "CCTV" as const, customerName: "대우건설", siteName: "왕숙3구역", zoneName: "외곽3구역", status: "OFFLINE" as const, createdAt: "2024-06-01", lastPing: "2시간 전", fotaVersion: "v2.3.0" },
+];
+
+export const INIT_AUDIT_LOGS = [
+  { id: "LOG-901", timestamp: "2026-07-27 19:40:12", userName: "김경기", role: "SUPER_ADMIN", action: "사용자 가입 신청 승인 (USER: site01)", ip: "192.168.1.105" },
+  { id: "LOG-902", timestamp: "2026-07-27 18:22:05", userName: "홍길동", role: "SYS_ADMIN", action: "새 고객사 등록 (고객사: 현대건설)", ip: "10.0.4.12" },
+  { id: "LOG-903", timestamp: "2026-07-27 17:15:33", userName: "이현장", role: "SITE_MGR", action: "TBM 등록 완료 (왕숙1구역 7/27)", ip: "172.16.0.44" },
+  { id: "LOG-904", timestamp: "2026-07-27 15:02:11", userName: "김경기", role: "SUPER_ADMIN", action: "전체 공지사항 발송 (태풍 대비 점검)", ip: "192.168.1.105" },
+  { id: "LOG-905", timestamp: "2026-07-27 11:30:00", userName: "홍길동", role: "SYS_ADMIN", action: "CCTV 디바이스 FOTA 패치 실행 (v2.4.1)", ip: "10.0.4.12" },
 ];

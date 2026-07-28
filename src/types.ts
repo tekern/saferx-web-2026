@@ -85,20 +85,74 @@ export interface Company {
   workers: number;
   pm: string;
   tel: string;
-  safetyMgr: string;
-  rating: 'A' | 'B' | 'C';
+  safetyMgr?: string;
+  rating?: 'A' | 'B' | 'C';
+  category?: string; // 업종
+  status?: string; // 상태
+}
+
+export interface Notice {
+  id: string;
+  title: string;
+  content: string;
+  author: string;
+  targetType: 'ALL' | 'ZONES';
+  targetZones?: string[];
+  importance: 'NORMAL' | 'IMPORTANT';
+  createdAt: string;
+  status: 'SENT';
+  readCount: number;
+  totalCount: number;
+}
+
+export interface Customer {
+  id: string;
+  name: string;
+  siteCount: number;
+  contractStatus: '계약중' | '만료예정' | '종료';
+  startDate: string;
+  endDate: string;
+  managerName: string;
+  tel: string;
+  createdAt: string;
+}
+
+export interface SystemDevice {
+  id: string;
+  type: 'CCTV' | 'IoT센서' | '무사고기기';
+  customerName: string;
+  siteName: string;
+  zoneName?: string;
+  status: 'ONLINE' | 'OFFLINE' | '점검중';
+  createdAt: string;
+  lastPing?: string;
+  fotaVersion?: string;
+}
+
+export interface AuditLog {
+  id: string;
+  timestamp: string;
+  userName: string;
+  role: string;
+  action: string;
+  ip: string;
 }
 
 export interface User {
   id: string;
   loginId: string;
   name: string;
-  role: 'GH_ADMIN' | 'SITE_MGR' | 'SAFETY' | 'VIEWER';
+  role: 'SYS_ADMIN' | 'SUPER_ADMIN' | 'SITE_MGR' | 'SAFETY' | 'VIEWER' | 'WORKER';
   dept: string;
   zones: string;
   tel: string;
   lastLogin: string;
-  status: 'ACTIVE' | 'INACTIVE';
+  status: 'ACTIVE' | 'INACTIVE' | 'PENDING' | 'REJECTED';
+  company?: string;
+  site?: string;
+  signupType?: string;
+  createdAt?: string;
+  password?: string;
 }
 
 export interface TbmItem {

@@ -305,7 +305,7 @@ export default function WorkersView({ currentZoneFilter, availableZones }: Worke
             {filteredWorkers.length === 0 && (
               <div className="py-12 text-center text-text-dim text-xs flex flex-col items-center justify-center gap-2 border border-dashed border-border-main rounded-xl">
                 <AlertOctagon className="w-6 h-6 text-text-dim" />
-                <span>검사 조건 필터에 합격한 작업자 정보원이 없습니다.</span>
+                <span>작업자 정보가 없습니다.</span>
               </div>
             )}
           </div>
