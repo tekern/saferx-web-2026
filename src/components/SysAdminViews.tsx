@@ -23,6 +23,7 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
   const [custFilterStatus, setCustFilterStatus] = useState("ALL");
   const [custSearch, setCustSearch] = useState("");
   const [showCustModal, setShowCustModal] = useState(false);
+  const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
   const [newCust, setNewCust] = useState({
     name: "",
     managerName: "",
@@ -109,6 +110,7 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
   const [assignFilterType, setAssignFilterType] = useState("ALL");
   const [assignFilterStatus, setAssignFilterStatus] = useState("ALL");
   const [showAssignModal, setShowAssignModal] = useState(false);
+  const [assigningRowDevice, setAssigningRowDevice] = useState<any | null>(null);
   const [newAssign, setNewAssign] = useState({
     sn: "",
     customerName: "GH 경기주택도시공사",
@@ -132,7 +134,7 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
   const [confirmFotaBatchModal, setConfirmFotaBatchModal] = useState(false);
 
   // ── 5. Infra Monitoring State ──
-  const [infraTab, setInfraTab] = useState<"total" | "ai" | "vms" | "db">("total");
+  const [serverTab, setServerTab] = useState<"vms" | "ai" | "thingx" | "db">("vms");
 
   // ── 6. Access Logs State (접속 로그) ──
   const [accessLogTab, setAccessLogTab] = useState<"system" | "location" | "iot" | "privacy">("system");
@@ -145,10 +147,22 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
     { id: "log-3", timestamp: "2026-07-27 18:15:33", user: "unknown_user", affiliation: "외부", ip: "211.45.12.99", result: "실패", reason: "비밀번호 5회 오류" },
     { id: "log-4", timestamp: "2026-07-27 17:30:00", user: "박현장 (site01)", affiliation: "GH 경기주택도시공사", ip: "172.16.0.44", result: "성공", reason: "정상 인증" },
   ]);
+  const [locationLogs] = useState<any[]>([
+    { id: "loc-1", timestamp: "2026-07-27 19:10:05", querier: "박현장 (site01)", affiliation: "GH 경기주택도시공사", target: "홍길동 (작업자_1042)", purpose: "비상 SOS 요청 위치 확인", locationResult: "왕숙1구역 A동 3층 굴착지점 (37.6214, 127.1422)", ip: "172.16.0.44" },
+    { id: "loc-2", timestamp: "2026-07-27 18:00:22", querier: "이현대 (hd_admin)", affiliation: "현대건설", target: "김안전 (작업자_8820)", purpose: "위험지역 접근 경보 확인", locationResult: "왕숙2구역 B동 크레인 작업반경 (37.6250, 127.1480)", ip: "172.16.10.8" },
+    { id: "loc-3", timestamp: "2026-07-27 15:45:10", querier: "최시스템 (sys_admin)", affiliation: "HQ 본사", target: "DEV-IOT-204 (센서)", purpose: "GPS 모듈 정상 오프셋 교정", locationResult: "왕숙2구역 지하2층 (37.6248, 127.1475)", ip: "10.0.4.12" },
+  ]);
+  const [iotDeviceLocations] = useState<any[]>([
+    { id: "iot-loc-1", timestamp: "2026-07-27 19:54:10", devId: "DEV-CCTV-101", manufacturer: "(주)한화비전", model: "XNO-C9083R", siteZone: "왕숙1구역 / A구역 정문 출입구", coords: "37.6212° N, 127.1418° E", rssi: "-62 dBm", status: "정상수신" },
+    { id: "iot-loc-2", timestamp: "2026-07-27 19:53:50", devId: "DEV-IOT-204", manufacturer: "하이크비전", model: "DS-2CD2143G0", siteZone: "왕숙2구역 / B동 3층 굴착구역", coords: "37.6251° N, 127.1481° E", rssi: "-75 dBm", status: "정상수신" },
+    { id: "iot-loc-3", timestamp: "2026-07-27 19:52:15", devId: "DEV-SPK-302", manufacturer: "코콤", model: "K-SPK-50W", siteZone: "왕숙1구역 / 타워크레인 1호기", coords: "37.6215° N, 127.1425° E", rssi: "-88 dBm", status: "신호약함" },
+  ]);
   const [privacyLogs] = useState<any[]>([
-    { id: "prv-1", timestamp: "2026-07-27 19:12:04", operator: "최시스템 (sys_admin)", targetId: "worker_1042 (홍길동)", actionType: "개인위치 및 비상연락처 조회", ip: "10.0.4.12" },
-    { id: "prv-2", timestamp: "2026-07-27 18:05:11", operator: "김경기 (super01)", targetId: "user_site01 (박현장)", actionType: "계정 개인정보 변경", ip: "192.168.1.105" },
-    { id: "prv-3", timestamp: "2026-07-27 16:40:22", operator: "이현대 (hd_admin)", targetId: "worker_8820 (이철수)", actionType: "안전장구 착용이력 마스킹 해제", ip: "172.16.10.8" },
+    { id: "prv-1", company: "서울시", site: "-", modifier: "강명주(lazyman01)", modifiedAt: "2026.05.20 10:43:10", menuName: "사용자관리", changeDetail: "사용자 상세 조회", targetPerson: "권오형_testtest1!(kwonoh1)" },
+    { id: "prv-2", company: "서울시", site: "-", modifier: "강명주(lazyman01)", modifiedAt: "2026.05.20 10:42:59", menuName: "사용자관리", changeDetail: "사용자 상세 조회", targetPerson: "권오형_testtest1!(kwonoh1)" },
+    { id: "prv-3", company: "동부공원여가센터", site: "길동생태공원", modifier: "강명주(lazyman01)", modifiedAt: "2026.05.20 10:42:52", menuName: "사용자관리", changeDetail: "사용자비밀번호초기화", targetPerson: "권오형(gribin05)" },
+    { id: "prv-4", company: "동부공원여가센터", site: "길동생태공원", modifier: "강명주(lazyman01)", modifiedAt: "2026.05.20 10:42:45", menuName: "사용자관리", changeDetail: "업무범위, 권한 정보 수정", targetPerson: "권오형(gribin05)" },
+    { id: "prv-5", company: "시설관리단", site: "6층 공원", modifier: "강명주(lazyman01)", modifiedAt: "2026.05.20 10:41:30", menuName: "사용자관리", changeDetail: "사용자 상세 조회", targetPerson: "권오형(ohkwon79)" },
   ]);
 
   // ── 7. Alert Settings State (알림 설정) ──
@@ -170,17 +184,20 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
   });
   const [alertSavedMsg, setAlertSavedMsg] = useState(false);
 
-  // ── 8. Notice State (공지 발송) ──
+  // ── 8. Notice State (공지사항 관리) ──
   const [noticeList, setNoticeList] = useState<any[]>([
-    { id: "not-1", title: "[긴급] v2.4.1 FOTA 시스템 일괄 점검 안내", targetCompany: "전체 고객사", noticeType: "긴급", sentAt: "2026-07-27 14:00", sender: "시스템관리자", status: "발송완료" },
-    { id: "not-2", title: "하반기 건설안전 법정 교육 가이드 및 웹 세미나", targetCompany: "GH 경기주택도시공사", noticeType: "일반", sentAt: "2026-07-20 10:30", sender: "시스템관리자", status: "발송완료" },
-    { id: "not-3", title: "주말 DB 인프라 정기 백업 점검 예정", targetCompany: "전체 고객사", noticeType: "점검", sentAt: "2026-07-15 09:00", sender: "시스템관리자", status: "발송완료" },
+    { id: "not-1", title: "[긴급] v2.4.1 FOTA 시스템 일괄 점검 안내", targetCompany: "전체 고객사", noticeType: "긴급", sentAt: "2026-07-27 14:00", sender: "시스템관리자", status: "공개", isPopup: true },
+    { id: "not-2", title: "하반기 건설안전 법정 교육 가이드 및 웹 세미나", targetCompany: "GH 경기주택도시공사", noticeType: "일반", sentAt: "2026-07-20 10:30", sender: "시스템관리자", status: "공개", isPopup: false },
+    { id: "not-3", title: "주말 DB 인프라 정기 백업 점검 예정", targetCompany: "전체 고객사", noticeType: "점검", sentAt: "2026-07-15 09:00", sender: "시스템관리자", status: "비공개", isPopup: false },
   ]);
   const [showNoticeModal, setShowNoticeModal] = useState(false);
+  const [editNoticeModal, setEditNoticeModal] = useState<any | null>(null);
   const [newNotice, setNewNotice] = useState({
     title: "",
     targetCompany: "전체 고객사",
     noticeType: "긴급",
+    status: "공개",
+    isPopup: false,
     content: ""
   });
   const [confirmNoticeModal, setConfirmNoticeModal] = useState(false);
@@ -673,9 +690,9 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
           <table className="w-full text-left text-xs">
             <thead className="bg-[#111113] text-[#8A8A96] font-semibold uppercase border-b border-[#2A2A2F]">
               <tr>
-                <th className="px-4 py-3">이름</th>
-                <th className="px-4 py-3">아이디</th>
                 <th className="px-4 py-3">소속</th>
+                <th className="px-4 py-3">아이디</th>
+                <th className="px-4 py-3">이름</th>
                 <th className="px-4 py-3">현재 권한</th>
                 <th className="px-4 py-3">권한 변경</th>
                 <th className="px-4 py-3">최근 접속일</th>
@@ -686,9 +703,9 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                 const currentSel = tempRoleMap[a.id] || a.role;
                 return (
                   <tr key={a.id} className="hover:bg-[#2A2A2F]/50 transition-colors">
-                    <td className="px-4 py-3.5 font-bold">{a.name}</td>
+                    <td className="px-4 py-3.5 font-sans font-semibold text-white">{a.company}</td>
                     <td className="px-4 py-3.5 font-mono text-[#00D1E8]">{a.loginId}</td>
-                    <td className="px-4 py-3.5">{a.company}</td>
+                    <td className="px-4 py-3.5 font-bold">{a.name}</td>
                     <td className="px-4 py-3.5">
                       <span className="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-[#2A2A2F] text-white border border-[#3A3A40]">
                         {a.role}
@@ -781,12 +798,6 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
             </h2>
             <p className="text-xs text-[#8A8A96] mt-1">CCTV, IoT센서, 무사고기기 디바이스를 특정 고객사 및 현장에 배정하거나 해제합니다.</p>
           </div>
-          <button
-            onClick={() => setShowAssignModal(true)}
-            className="px-3.5 py-2 bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-[#111113] font-bold rounded-lg text-xs flex items-center gap-1.5 cursor-pointer"
-          >
-            <Plus className="w-3.5 h-3.5" /> 디바이스 배정
-          </button>
         </div>
 
         {/* Filter */}
@@ -852,7 +863,22 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                     </span>
                   </td>
                   <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{d.assignDate}</td>
-                  <td className="px-4 py-3.5 text-right">
+                  <td className="px-4 py-3.5 text-right space-x-1">
+                    {d.status === "미배정" && (
+                      <button
+                        onClick={() => {
+                          setAssigningRowDevice(d);
+                          setNewAssign({
+                            sn: d.sn,
+                            customerName: d.customerName !== "미배정" ? d.customerName : "GH 경기주택도시공사",
+                            siteName: d.siteName !== "미배정" ? d.siteName : "왕숙1구역"
+                          });
+                        }}
+                        className="px-2.5 py-1 bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-[#111113] rounded text-xs font-bold cursor-pointer"
+                      >
+                        디바이스 배정
+                      </button>
+                    )}
                     {d.status === "배정" && (
                       <button
                         onClick={() => handleUnassignDevice(d.id)}
@@ -922,6 +948,89 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                     className="flex-1 py-2 bg-[#00D1E8] text-[#111113] font-bold rounded cursor-pointer"
                   >
                     배정 완료
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* Row level Device Assign Modal */}
+        {assigningRowDevice && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4">
+            <div className="w-full max-w-md bg-[#222226] border border-[#2A2A2F] rounded-xl p-6 space-y-4 shadow-2xl">
+              <h3 className="text-base font-bold text-white border-b border-[#2A2A2F] pb-3">
+                디바이스 배정 설정 ({assigningRowDevice.sn})
+              </h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setAssignDevices(assignDevices.map(d => 
+                    d.id === assigningRowDevice.id 
+                      ? { ...d, customerName: newAssign.customerName, siteName: newAssign.siteName, status: "배정", assignDate: new Date().toISOString().split("T")[0] }
+                      : d
+                  ));
+                  alert(`[${assigningRowDevice.sn}] 디바이스가 ${newAssign.customerName} (${newAssign.siteName})에 배정되었습니다.`);
+                  setAssigningRowDevice(null);
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">디바이스 ID (S/N)</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={assigningRowDevice.sn}
+                    className="w-full bg-[#111113]/50 border border-[#2A2A2F] text-[#00D1E8] px-3 py-2 rounded outline-none font-mono font-bold"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">제조사 / 모델</label>
+                  <input
+                    type="text"
+                    disabled
+                    value={`${assigningRowDevice.manufacturer || "한화비전"} (${assigningRowDevice.model || "XNO-C9083R"})`}
+                    className="w-full bg-[#111113]/50 border border-[#2A2A2F] text-[#8A8A96] px-3 py-2 rounded outline-none"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">배정 고객사 선택</label>
+                  <select
+                    value={newAssign.customerName}
+                    onChange={(e) => setNewAssign({ ...newAssign, customerName: e.target.value })}
+                    className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none"
+                  >
+                    {INIT_CUSTOMERS.map(c => (
+                      <option key={c.id} value={c.name}>{c.name}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">배정 현장 선택</label>
+                  <select
+                    value={newAssign.siteName}
+                    onChange={(e) => setNewAssign({ ...newAssign, siteName: e.target.value })}
+                    className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none"
+                  >
+                    <option value="왕숙1구역">왕숙1구역</option>
+                    <option value="왕숙2구역">왕숙2구역</option>
+                    <option value="왕숙3구역">왕숙3구역</option>
+                    <option value="동탄2신도시">동탄2신도시</option>
+                  </select>
+                </div>
+                <div className="flex gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setAssigningRowDevice(null)}
+                    className="flex-1 py-2 bg-[#2A2A2F] text-white font-bold rounded cursor-pointer"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-[#00D1E8] text-[#111113] font-bold rounded cursor-pointer"
+                  >
+                    배정 적용
                   </button>
                 </div>
               </form>
@@ -1128,40 +1237,103 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 6. INFRASTRUCTURE MONITORING (sys-infra, infra-vms, infra-ai, infra-thingx, infra-db, infra-net)
+  // 6. SERVER MANAGEMENT / INFRA MONITORING (sys-servers, sys-infra, etc.)
   // ─────────────────────────────────────────────────────────────
-  if (["sys-infra", "infra-vms", "infra-ai", "infra-thingx", "infra-db", "infra-net"].includes(currentPage)) {
+  if (["sys-servers", "sys-infra", "infra-vms", "infra-ai", "infra-thingx", "infra-db", "infra-net"].includes(currentPage)) {
+    const serverDataMap = {
+      vms: {
+        name: "VMS 영상서버",
+        ip: "10.100.10.11",
+        status: "정상",
+        cpu: 38.4,
+        cpuTrend: [28, 32, 45, 38, 41, 35, 38, 40, 39, 38],
+        ram: 62.1,
+        ramText: "8.2 GB / 16.0 GB",
+        ramTrend: [55, 58, 60, 61, 62, 62, 63, 62, 62, 62],
+        disk: 78.5,
+        diskText: "15.7 TB / 20.0 TB",
+        diskTrend: [75, 75, 76, 76, 77, 77, 78, 78, 78, 78],
+        details: "RTSP 스트림 214개 채널 실시간 가독 수신 중"
+      },
+      ai: {
+        name: "AI 서버",
+        ip: "10.100.10.12",
+        status: "정상",
+        cpu: 74.2,
+        cpuTrend: [60, 68, 75, 82, 78, 70, 74, 80, 76, 74],
+        ram: 81.0,
+        ramText: "25.9 GB / 32.0 GB",
+        ramTrend: [78, 79, 80, 80, 81, 81, 82, 81, 81, 81],
+        disk: 52.3,
+        diskText: "5.2 TB / 10.0 TB",
+        diskTrend: [50, 50, 51, 51, 51, 52, 52, 52, 52, 52],
+        details: "NVIDIA RTX 4090 GPU 추론 가속기 64.0% 로드 중"
+      },
+      thingx: {
+        name: "ThingX IoT",
+        ip: "10.100.10.13",
+        status: "경고",
+        cpu: 22.8,
+        cpuTrend: [15, 18, 25, 20, 22, 21, 23, 22, 24, 22],
+        ram: 44.5,
+        ramText: "7.1 GB / 16.0 GB",
+        ramTrend: [40, 42, 43, 44, 44, 45, 44, 45, 44, 44],
+        disk: 31.0,
+        diskText: "1.55 TB / 5.0 TB",
+        diskTrend: [30, 30, 30, 31, 31, 31, 31, 31, 31, 31],
+        details: "IoT 센서 대기 큐 120건 발생 (응답 지연 180ms)"
+      },
+      db: {
+        name: "DB 서버",
+        ip: "10.100.10.14",
+        status: "정상",
+        cpu: 48.6,
+        cpuTrend: [35, 40, 52, 48, 50, 46, 49, 51, 47, 48],
+        ram: 68.2,
+        ramText: "21.8 GB / 32.0 GB",
+        ramTrend: [65, 66, 67, 67, 68, 68, 69, 68, 68, 68],
+        disk: 64.0,
+        diskText: "6.4 TB / 10.0 TB",
+        diskTrend: [60, 61, 62, 62, 63, 63, 64, 64, 64, 64],
+        details: "Active Connections: 128 / 500, IOPS: 14,200"
+      }
+    };
+
+    const curServer = serverDataMap[serverTab];
+
     return (
       <div className="p-6 space-y-6 text-[#ECECEC] font-sans">
         <div className="flex justify-between items-center pb-4 border-b border-[#2A2A2F]">
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Server className="w-5 h-5 text-[#00D1E8]" />
-              인프라 모니터링
+              서버 관리
             </h2>
-            <p className="text-xs text-[#8A8A96] mt-1">VMS 영상, AI 분석, ThingX IoT, DB 서버 리소스 및 헬스체크 현황</p>
+            <p className="text-xs text-[#8A8A96] mt-1">
+              VMS 영상서버, AI 서버, ThingX IoT, DB 서버의 CPU, RAM, 디스크 상태 모니터링
+            </p>
           </div>
           <button
-            onClick={() => alert("서버 헬스체크를 새로고침 하였습니다.")}
+            onClick={() => alert("서버 상태를 실시간 새로고침 하였습니다.")}
             className="px-3.5 py-2 bg-[#2A2A2F] hover:bg-[#3A3A40] text-white font-bold rounded-lg text-xs flex items-center gap-1.5 cursor-pointer"
           >
-            <RefreshCw className="w-3.5 h-3.5 text-[#00D1E8]" /> 새로고침
+            <RefreshCw className="w-3.5 h-3.5 text-[#00D1E8]" /> 실시간 새로고침
           </button>
         </div>
 
-        {/* Tabs */}
+        {/* Server Tabs */}
         <div className="flex gap-2 border-b border-[#2A2A2F] pb-3 text-xs">
           {[
-            { id: "total", label: "통합 관제" },
-            { id: "ai", label: "AI 분석" },
-            { id: "vms", label: "VMS" },
-            { id: "db", label: "DB 상태" }
+            { id: "vms", label: "VMS 영상서버" },
+            { id: "ai", label: "AI 서버" },
+            { id: "thingx", label: "ThingX IoT" },
+            { id: "db", label: "DB 서버" }
           ].map(t => (
             <button
               key={t.id}
-              onClick={() => setInfraTab(t.id as any)}
+              onClick={() => setServerTab(t.id as any)}
               className={`px-4 py-2 rounded-lg font-bold transition-all cursor-pointer ${
-                infraTab === t.id ? "bg-[#00D1E8] text-[#111113]" : "bg-[#222226] text-[#8A8A96] hover:text-white"
+                serverTab === t.id ? "bg-[#00D1E8] text-[#111113]" : "bg-[#222226] text-[#8A8A96] hover:text-white"
               }`}
             >
               {t.label}
@@ -1169,158 +1341,133 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
           ))}
         </div>
 
-        {/* Server Status Summary Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-          <div className="bg-[#222226] border border-[#22C55E]/40 p-4 rounded-xl space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="font-bold text-white">VMS 서버</span>
-              <span className="text-[#22C55E] font-bold">● 정상</span>
-            </div>
-            <div className="text-xs font-mono text-[#8A8A96]">CPU 24.5% · RAM 4.2GB</div>
+        {/* Selected Server Summary Banner */}
+        <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl flex items-center justify-between text-xs">
+          <div className="flex items-center gap-3">
+            <span className="font-bold text-base text-white">{curServer.name}</span>
+            <span className="font-mono text-[#8A8A96]">({curServer.ip})</span>
+            <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+              curServer.status === "정상" ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#F59E0B]/20 text-[#F59E0B]"
+            }`}>
+              ● {curServer.status}
+            </span>
           </div>
-          <div className="bg-[#222226] border border-[#22C55E]/40 p-4 rounded-xl space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="font-bold text-white">AI 영상분석</span>
-              <span className="text-[#22C55E] font-bold">● 정상</span>
-            </div>
-            <div className="text-xs font-mono text-[#8A8A96]">GPU 64.0% · 30 FPS</div>
-          </div>
-          <div className="bg-[#222226] border border-[#F59E0B]/40 p-4 rounded-xl space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="font-bold text-white">ThingX IoT</span>
-              <span className="text-[#F59E0B] font-bold">● 경고</span>
-            </div>
-            <div className="text-xs font-mono text-[#8A8A96]">180ms · 120개 대기</div>
-          </div>
-          <div className="bg-[#222226] border border-[#22C55E]/40 p-4 rounded-xl space-y-2">
-            <div className="flex justify-between text-xs">
-              <span className="font-bold text-white">DB 서버</span>
-              <span className="text-[#22C55E] font-bold">● 정상</span>
-            </div>
-            <div className="text-xs font-mono text-[#8A8A96]">용량 42% (2.1TB/5TB)</div>
-          </div>
+          <div className="text-[#8A8A96] text-xs font-mono">{curServer.details}</div>
         </div>
 
-        {/* Detail content by Tab */}
-        {infraTab === "total" && (
-          <div className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* CPU Chart Card */}
-              <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-white">CPU 사용률</span>
-                  <span className="text-xs font-mono font-bold text-[#00D1E8]">34.2%</span>
-                </div>
-                <div className="w-full bg-[#111113] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#00D1E8] h-full w-[34%]" />
-                </div>
-                <div className="flex items-end gap-1 h-16 pt-2 justify-between border-t border-[#2A2A2F]">
-                  {[22, 28, 35, 42, 30, 25, 34, 40, 38, 34].map((val, idx) => (
-                    <div key={idx} className="flex-1 bg-[#00D1E8]/20 hover:bg-[#00D1E8] rounded-t transition-all" style={{ height: `${val}%` }} title={`${val}%`} />
-                  ))}
-                </div>
+        {/* Graphs Grid: CPU, RAM, Disk */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* CPU Graph Card */}
+          <div className="bg-[#222226] border border-[#2A2A2F] p-5 rounded-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-[#2A2A2F] pb-3">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <Cpu className="w-4 h-4 text-[#00D1E8]" /> CPU 상태
+              </span>
+              <span className="text-base font-mono font-bold text-[#00D1E8]">{curServer.cpu}%</span>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs text-[#8A8A96] mb-1">
+                <span>실시간 사용률</span>
+                <span>{curServer.cpu}%</span>
               </div>
-
-              {/* Memory Chart Card */}
-              <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-white">RAM 메모리</span>
-                  <span className="text-xs font-mono font-bold text-[#22C55E]">58.4%</span>
-                </div>
-                <div className="w-full bg-[#111113] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#22C55E] h-full w-[58%]" />
-                </div>
-                <div className="flex items-end gap-1 h-16 pt-2 justify-between border-t border-[#2A2A2F]">
-                  {[50, 52, 55, 54, 58, 60, 57, 56, 59, 58].map((val, idx) => (
-                    <div key={idx} className="flex-1 bg-[#22C55E]/20 hover:bg-[#22C55E] rounded-t transition-all" style={{ height: `${val}%` }} title={`${val}%`} />
-                  ))}
-                </div>
-              </div>
-
-              {/* Disk Chart Card */}
-              <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-white">Disk 스토리지</span>
-                  <span className="text-xs font-mono font-bold text-[#F59E0B]">72.1%</span>
-                </div>
-                <div className="w-full bg-[#111113] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#F59E0B] h-full w-[72%]" />
-                </div>
-                <div className="flex items-end gap-1 h-16 pt-2 justify-between border-t border-[#2A2A2F]">
-                  {[68, 69, 70, 70, 71, 71, 72, 72, 72, 72].map((val, idx) => (
-                    <div key={idx} className="flex-1 bg-[#F59E0B]/20 hover:bg-[#F59E0B] rounded-t transition-all" style={{ height: `${val}%` }} title={`${val}%`} />
-                  ))}
-                </div>
-              </div>
-
-              {/* Network Chart Card */}
-              <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl space-y-3">
-                <div className="flex justify-between items-center">
-                  <span className="text-xs font-bold text-white">Network 트래픽</span>
-                  <span className="text-xs font-mono font-bold text-[#00D1E8]">142 Mbps</span>
-                </div>
-                <div className="w-full bg-[#111113] h-2 rounded-full overflow-hidden">
-                  <div className="bg-[#00D1E8] h-full w-[45%]" />
-                </div>
-                <div className="flex items-end gap-1 h-16 pt-2 justify-between border-t border-[#2A2A2F]">
-                  {[30, 45, 60, 80, 55, 40, 75, 90, 65, 45].map((val, idx) => (
-                    <div key={idx} className="flex-1 bg-[#00D1E8]/20 hover:bg-[#00D1E8] rounded-t transition-all" style={{ height: `${val}%` }} title={`${val} Mbps`} />
-                  ))}
-                </div>
+              <div className="w-full bg-[#111113] h-3 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-gradient-to-r from-[#00D1E8] to-[#22C55E] transition-all duration-500"
+                  style={{ width: `${curServer.cpu}%` }}
+                />
               </div>
             </div>
-
-            <div className="bg-[#222226] border border-[#2A2A2F] p-5 rounded-xl space-y-4">
-              <h3 className="text-sm font-bold text-white">실시간 네트워크 트래픽 대역폭</h3>
-              <div className="space-y-3 font-mono text-xs">
-                <div>
-                  <div className="flex justify-between text-[#8A8A96] mb-1">
-                    <span>Inbound Traffic (142 Mbps)</span>
-                    <span className="text-[#00D1E8]">42%</span>
+            <div className="pt-2">
+              <div className="text-[11px] text-[#8A8A96] mb-2 font-semibold">최근 10분 CPU 변화 추이</div>
+              <div className="flex items-end gap-1.5 h-28 pt-2 justify-between bg-[#111113] p-3 rounded-lg border border-[#2A2A2F]">
+                {curServer.cpuTrend.map((val, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-mono text-[#8A8A96]">{val}%</span>
+                    <div
+                      className="w-full bg-[#00D1E8]/40 hover:bg-[#00D1E8] rounded-t transition-all"
+                      style={{ height: `${val}%` }}
+                      title={`${val}%`}
+                    />
                   </div>
-                  <div className="w-full bg-[#111113] h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-[#00D1E8] h-full w-[42%]" />
-                  </div>
-                </div>
-                <div>
-                  <div className="flex justify-between text-[#8A8A96] mb-1">
-                    <span>Outbound Traffic (88 Mbps)</span>
-                    <span className="text-[#22C55E]">28%</span>
-                  </div>
-                  <div className="w-full bg-[#111113] h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-[#22C55E] h-full w-[28%]" />
-                  </div>
-                </div>
+                ))}
               </div>
             </div>
           </div>
-        )}
 
-        {infraTab === "ai" && (
-          <div className="bg-[#222226] border border-[#2A2A2F] p-5 rounded-xl space-y-3 font-mono text-xs text-[#8A8A96]">
-            <h3 className="text-sm font-bold text-white font-sans">AI 추론 엔진 메트릭</h3>
-            <div>GPU 사용률: <strong className="text-[#00D1E8]">64.0% (NVIDIA RTX 4090)</strong></div>
-            <div>추론 프레임 레이트: <strong className="text-white">30.2 FPS</strong></div>
-            <div>처리 큐 대기 건수: <strong className="text-[#22C55E]">0 건 (지연 없음)</strong></div>
+          {/* RAM Graph Card */}
+          <div className="bg-[#222226] border border-[#2A2A2F] p-5 rounded-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-[#2A2A2F] pb-3">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <HardDrive className="w-4 h-4 text-[#22C55E]" /> RAM 상태
+              </span>
+              <span className="text-base font-mono font-bold text-[#22C55E]">{curServer.ram}%</span>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs text-[#8A8A96] mb-1">
+                <span>메모리 점유량</span>
+                <span className="font-mono text-white">{curServer.ramText}</span>
+              </div>
+              <div className="w-full bg-[#111113] h-3 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#22C55E] transition-all duration-500"
+                  style={{ width: `${curServer.ram}%` }}
+                />
+              </div>
+            </div>
+            <div className="pt-2">
+              <div className="text-[11px] text-[#8A8A96] mb-2 font-semibold">최근 10분 RAM 사용률 추이</div>
+              <div className="flex items-end gap-1.5 h-28 pt-2 justify-between bg-[#111113] p-3 rounded-lg border border-[#2A2A2F]">
+                {curServer.ramTrend.map((val, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-mono text-[#8A8A96]">{val}%</span>
+                    <div
+                      className="w-full bg-[#22C55E]/40 hover:bg-[#22C55E] rounded-t transition-all"
+                      style={{ height: `${val}%` }}
+                      title={`${val}%`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
 
-        {infraTab === "vms" && (
-          <div className="bg-[#222226] border border-[#2A2A2F] p-5 rounded-xl space-y-3 font-mono text-xs text-[#8A8A96]">
-            <h3 className="text-sm font-bold text-white font-sans">VMS 관제 스트리밍</h3>
-            <div>카메라 스트림 상태: <strong className="text-[#22C55E]">214 / 214 활성 (100%)</strong></div>
-            <div>녹화용 스토리비: <strong className="text-white">16.4 TB / 20.0 TB (82%)</strong></div>
+          {/* Disk Graph Card */}
+          <div className="bg-[#222226] border border-[#2A2A2F] p-5 rounded-xl space-y-4">
+            <div className="flex justify-between items-center border-b border-[#2A2A2F] pb-3">
+              <span className="text-sm font-bold text-white flex items-center gap-2">
+                <Server className="w-4 h-4 text-[#F59E0B]" /> 디스크 상태
+              </span>
+              <span className="text-base font-mono font-bold text-[#F59E0B]">{curServer.disk}%</span>
+            </div>
+            <div>
+              <div className="flex justify-between text-xs text-[#8A8A96] mb-1">
+                <span>스토리지 사용량</span>
+                <span className="font-mono text-white">{curServer.diskText}</span>
+              </div>
+              <div className="w-full bg-[#111113] h-3 rounded-full overflow-hidden">
+                <div
+                  className="h-full bg-[#F59E0B] transition-all duration-500"
+                  style={{ width: `${curServer.disk}%` }}
+                />
+              </div>
+            </div>
+            <div className="pt-2">
+              <div className="text-[11px] text-[#8A8A96] mb-2 font-semibold">디스크 사용 용량 점유 추이</div>
+              <div className="flex items-end gap-1.5 h-28 pt-2 justify-between bg-[#111113] p-3 rounded-lg border border-[#2A2A2F]">
+                {curServer.diskTrend.map((val, idx) => (
+                  <div key={idx} className="flex-1 flex flex-col items-center gap-1">
+                    <span className="text-[9px] font-mono text-[#8A8A96]">{val}%</span>
+                    <div
+                      className="w-full bg-[#F59E0B]/40 hover:bg-[#F59E0B] rounded-t transition-all"
+                      style={{ height: `${val}%` }}
+                      title={`${val}%`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
-        )}
-
-        {infraTab === "db" && (
-          <div className="bg-[#222226] border border-[#2A2A2F] p-5 rounded-xl space-y-3 font-mono text-xs text-[#8A8A96]">
-            <h3 className="text-sm font-bold text-white font-sans">Database 상태 및 IOPS</h3>
-            <div>커넥션 수: <strong className="text-white">128 / 500 Active Connections</strong></div>
-            <div>IOPS: <strong className="text-[#00D1E8]">14,200 IOPS</strong></div>
-            <div>백업 상태: <strong className="text-[#22C55E]">성공 (금일 04:00 완료)</strong></div>
-          </div>
-        )}
+        </div>
       </div>
     );
   }
@@ -1392,105 +1539,288 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
           </button>
         </div>
 
-        {/* Filters */}
-        <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl flex flex-wrap gap-4 items-center text-xs">
-          <div className="flex items-center gap-2">
-            <span className="text-[#8A8A96] font-semibold">기간:</span>
-            <select
-              value={logFilterPeriod}
-              onChange={(e) => setLogFilterPeriod(e.target.value)}
-              className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
-            >
-              <option value="ALL">전체</option>
-              <option value="TODAY">오늘</option>
-              <option value="1WEEK">1주일</option>
-              <option value="1MONTH">1개월</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <span className="text-[#8A8A96] font-semibold">접속 결과:</span>
-            <select
-              value={logFilterResult}
-              onChange={(e) => setLogFilterResult(e.target.value)}
-              className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
-            >
-              <option value="ALL">전체</option>
-              <option value="성공">성공</option>
-              <option value="실패">실패</option>
-            </select>
-          </div>
-
-          <div className="flex items-center gap-2 flex-1 min-w-[200px]">
-            <Search className="w-4 h-4 text-[#8A8A96]" />
-            <input
-              type="text"
-              placeholder="사용자 / IP / 검색어 입력..."
-              value={logSearch}
-              onChange={(e) => setLogSearch(e.target.value)}
-              className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
-            />
-          </div>
-        </div>
-
-        {/* Table */}
+        {/* Filters according to active tab */}
         {accessLogTab === "privacy" ? (
-          <div className="bg-[#222226] border border-[#2A2A2F] rounded-xl overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#111113] text-[#8A8A96] font-semibold uppercase border-b border-[#2A2A2F]">
-                <tr>
-                  <th className="px-4 py-3">일시</th>
-                  <th className="px-4 py-3">작업자</th>
-                  <th className="px-4 py-3">대상자 ID</th>
-                  <th className="px-4 py-3">작업 유형</th>
-                  <th className="px-4 py-3">접속 IP</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#2A2A2F] text-white">
-                {privacyLogs.map((p) => (
-                  <tr key={p.id} className="hover:bg-[#2A2A2F]/50 transition-colors font-mono">
-                    <td className="px-4 py-3.5 text-[#8A8A96]">{p.timestamp}</td>
-                    <td className="px-4 py-3.5 text-[#00D1E8] font-bold font-sans">{p.operator}</td>
-                    <td className="px-4 py-3.5 font-sans font-semibold text-white">{p.targetId}</td>
-                    <td className="px-4 py-3.5 font-sans text-white">{p.actionType}</td>
-                    <td className="px-4 py-3.5 text-[#8A8A96]">{p.ip}</td>
+          <div className="space-y-4">
+            <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl flex flex-wrap gap-4 items-center text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[#8A8A96] font-semibold">검색기간:</span>
+                <input type="date" defaultValue="2026-05-01" className="bg-[#111113] border border-[#2A2A2F] text-white px-2.5 py-1.5 rounded outline-none" />
+                <span className="text-[#8A8A96]">~</span>
+                <input type="date" defaultValue="2026-05-20" className="bg-[#111113] border border-[#2A2A2F] text-white px-2.5 py-1.5 rounded outline-none" />
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[#8A8A96] font-semibold">기관/센터:</span>
+                <select className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none">
+                  <option value="ALL">전체</option>
+                  <option value="서울시">서울시</option>
+                  <option value="동부공원여가센터">동부공원여가센터</option>
+                  <option value="시설관리단">시설관리단</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-[#8A8A96] font-semibold">현장/공원:</span>
+                <select className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none">
+                  <option value="ALL">전체</option>
+                  <option value="길동생태공원">길동생태공원</option>
+                  <option value="6층 공원">6층 공원</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <Search className="w-4 h-4 text-[#8A8A96]" />
+                <input
+                  type="text"
+                  placeholder="변경자 / 메뉴명 / 대상자 검색..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
+                />
+              </div>
+            </div>
+
+            {/* Sub header count & Excel */}
+            <div className="flex justify-between items-center text-xs px-1">
+              <span className="text-[#8A8A96] font-semibold">
+                총 <strong className="text-[#00D1E8] font-bold">{privacyLogs.length}</strong> 건
+              </span>
+              <button
+                onClick={() => handleExportExcel("개인정보 처리 이력")}
+                className="px-3 py-1.5 bg-[#2A2A2F] hover:bg-[#3A3A40] text-white font-bold rounded flex items-center gap-1.5 cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" /> 엑셀 다운로드
+              </button>
+            </div>
+
+            {/* Privacy Log Table */}
+            <div className="bg-[#222226] border border-[#2A2A2F] rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111113] text-[#8A8A96] font-semibold uppercase border-b border-[#2A2A2F]">
+                  <tr>
+                    <th className="px-4 py-3">기관/센터</th>
+                    <th className="px-4 py-3">현장/공원</th>
+                    <th className="px-4 py-3">변경자</th>
+                    <th className="px-4 py-3">변경 일시</th>
+                    <th className="px-4 py-3">메뉴명</th>
+                    <th className="px-4 py-3">변경사항</th>
+                    <th className="px-4 py-3">대상자</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#2A2A2F] text-white">
+                  {privacyLogs.map((p) => (
+                    <tr key={p.id} className="hover:bg-[#2A2A2F]/50 transition-colors">
+                      <td className="px-4 py-3.5 text-white font-semibold">{p.company}</td>
+                      <td className="px-4 py-3.5 text-[#8A8A96]">{p.site}</td>
+                      <td className="px-4 py-3.5 text-[#00D1E8] font-bold">{p.modifier}</td>
+                      <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{p.modifiedAt}</td>
+                      <td className="px-4 py-3.5 text-white font-medium">{p.menuName}</td>
+                      <td className="px-4 py-3.5 text-white">{p.changeDetail}</td>
+                      <td className="px-4 py-3.5 font-mono text-[#22C55E]">{p.targetPerson}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination */}
+            <div className="flex justify-center items-center gap-2 pt-2 text-xs">
+              <button className="px-2.5 py-1 bg-[#111113] text-[#8A8A96] hover:text-white rounded border border-[#2A2A2F]">&lt;</button>
+              <button className="px-3 py-1 bg-[#00D1E8] text-[#111113] font-bold rounded">1</button>
+              <button className="px-2.5 py-1 bg-[#111113] text-[#8A8A96] hover:text-white rounded border border-[#2A2A2F]">&gt;</button>
+            </div>
+          </div>
+        ) : accessLogTab === "location" ? (
+          /* Location Query History */
+          <div className="space-y-4">
+            <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl flex flex-wrap gap-4 items-center text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[#8A8A96] font-semibold">기간:</span>
+                <select
+                  value={logFilterPeriod}
+                  onChange={(e) => setLogFilterPeriod(e.target.value)}
+                  className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
+                >
+                  <option value="ALL">전체</option>
+                  <option value="TODAY">오늘</option>
+                  <option value="1WEEK">1주일</option>
+                  <option value="1MONTH">1개월</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <Search className="w-4 h-4 text-[#8A8A96]" />
+                <input
+                  type="text"
+                  placeholder="조회자 / 대상자 / 목적 검색..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#222226] border border-[#2A2A2F] rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111113] text-[#8A8A96] font-semibold uppercase border-b border-[#2A2A2F]">
+                  <tr>
+                    <th className="px-4 py-3">조회 일시</th>
+                    <th className="px-4 py-3">조회자</th>
+                    <th className="px-4 py-3">소속</th>
+                    <th className="px-4 py-3">조회 대상</th>
+                    <th className="px-4 py-3">조회 목적</th>
+                    <th className="px-4 py-3">조회 위치 결과</th>
+                    <th className="px-4 py-3">접속 IP</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#2A2A2F] text-white">
+                  {locationLogs.map((loc) => (
+                    <tr key={loc.id} className="hover:bg-[#2A2A2F]/50 transition-colors">
+                      <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{loc.timestamp}</td>
+                      <td className="px-4 py-3.5 text-[#00D1E8] font-bold">{loc.querier}</td>
+                      <td className="px-4 py-3.5 text-white">{loc.affiliation}</td>
+                      <td className="px-4 py-3.5 font-semibold text-white">{loc.target}</td>
+                      <td className="px-4 py-3.5 text-white">{loc.purpose}</td>
+                      <td className="px-4 py-3.5 text-[#22C55E] font-mono">{loc.locationResult}</td>
+                      <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{loc.ip}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        ) : accessLogTab === "iot" ? (
+          /* IoT Device Location */
+          <div className="space-y-4">
+            <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl flex flex-wrap gap-4 items-center text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[#8A8A96] font-semibold">디바이스 종류:</span>
+                <select className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none">
+                  <option value="ALL">전체</option>
+                  <option value="CCTV">CCTV</option>
+                  <option value="IoT">IoT 센서</option>
+                  <option value="스피커">스피커</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <Search className="w-4 h-4 text-[#8A8A96]" />
+                <input
+                  type="text"
+                  placeholder="디바이스 ID / 현장구역 검색..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#222226] border border-[#2A2A2F] rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111113] text-[#8A8A96] font-semibold uppercase border-b border-[#2A2A2F]">
+                  <tr>
+                    <th className="px-4 py-3">수집 일시</th>
+                    <th className="px-4 py-3">디바이스 ID</th>
+                    <th className="px-4 py-3">제조사 / 모델</th>
+                    <th className="px-4 py-3">배정 현장/구역</th>
+                    <th className="px-4 py-3">GPS 좌표</th>
+                    <th className="px-4 py-3">수신 신호(RSSI)</th>
+                    <th className="px-4 py-3">상태</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-[#2A2A2F] text-white">
+                  {iotDeviceLocations.map((iot) => (
+                    <tr key={iot.id} className="hover:bg-[#2A2A2F]/50 transition-colors">
+                      <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{iot.timestamp}</td>
+                      <td className="px-4 py-3.5 font-mono font-bold text-[#00D1E8]">{iot.devId}</td>
+                      <td className="px-4 py-3.5 text-white">{iot.manufacturer} ({iot.model})</td>
+                      <td className="px-4 py-3.5 text-white font-semibold">{iot.siteZone}</td>
+                      <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{iot.coords}</td>
+                      <td className="px-4 py-3.5 font-mono text-white">{iot.rssi}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          iot.status === "정상수신" ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#F59E0B]/20 text-[#F59E0B]"
+                        }`}>
+                          {iot.status}
+                        </span>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         ) : (
-          <div className="bg-[#222226] border border-[#2A2A2F] rounded-xl overflow-hidden">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-[#111113] text-[#8A8A96] font-semibold uppercase border-b border-[#2A2A2F]">
-                <tr>
-                  <th className="px-4 py-3">접속 일시</th>
-                  <th className="px-4 py-3">사용자명(아이디)</th>
-                  <th className="px-4 py-3">소속</th>
-                  <th className="px-4 py-3">IP 주소</th>
-                  <th className="px-4 py-3">접속 결과</th>
-                  <th className="px-4 py-3">사유</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-[#2A2A2F] text-white">
-                {filteredLogs.map((l) => (
-                  <tr key={l.id} className="hover:bg-[#2A2A2F]/50 transition-colors font-mono">
-                    <td className="px-4 py-3.5 text-[#8A8A96]">{l.timestamp}</td>
-                    <td className="px-4 py-3.5 text-[#00D1E8] font-bold font-sans">{l.user}</td>
-                    <td className="px-4 py-3.5 font-sans text-white">{l.affiliation}</td>
-                    <td className="px-4 py-3.5">{l.ip}</td>
-                    <td className="px-4 py-3.5">
-                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
-                        l.result === "성공" ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#EF4444]/20 text-[#EF4444]"
-                      }`}>
-                        {l.result}
-                      </span>
-                    </td>
-                    <td className="px-4 py-3.5 font-sans text-[#8A8A96]">{l.reason}</td>
+          /* System Access Log */
+          <div className="space-y-4">
+            <div className="bg-[#222226] border border-[#2A2A2F] p-4 rounded-xl flex flex-wrap gap-4 items-center text-xs">
+              <div className="flex items-center gap-2">
+                <span className="text-[#8A8A96] font-semibold">기간:</span>
+                <select
+                  value={logFilterPeriod}
+                  onChange={(e) => setLogFilterPeriod(e.target.value)}
+                  className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
+                >
+                  <option value="ALL">전체</option>
+                  <option value="TODAY">오늘</option>
+                  <option value="1WEEK">1주일</option>
+                  <option value="1MONTH">1개월</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <span className="text-[#8A8A96] font-semibold">접속 결과:</span>
+                <select
+                  value={logFilterResult}
+                  onChange={(e) => setLogFilterResult(e.target.value)}
+                  className="bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
+                >
+                  <option value="ALL">전체</option>
+                  <option value="성공">성공</option>
+                  <option value="실패">실패</option>
+                </select>
+              </div>
+
+              <div className="flex items-center gap-2 flex-1 min-w-[200px]">
+                <Search className="w-4 h-4 text-[#8A8A96]" />
+                <input
+                  type="text"
+                  placeholder="사용자 / IP / 검색어 입력..."
+                  value={logSearch}
+                  onChange={(e) => setLogSearch(e.target.value)}
+                  className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-1.5 rounded-lg outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="bg-[#222226] border border-[#2A2A2F] rounded-xl overflow-hidden">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-[#111113] text-[#8A8A96] font-semibold uppercase border-b border-[#2A2A2F]">
+                  <tr>
+                    <th className="px-4 py-3">접속 일시</th>
+                    <th className="px-4 py-3">사용자명(아이디)</th>
+                    <th className="px-4 py-3">소속</th>
+                    <th className="px-4 py-3">IP 주소</th>
+                    <th className="px-4 py-3">접속 결과</th>
+                    <th className="px-4 py-3">사유</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody className="divide-y divide-[#2A2A2F] text-white">
+                  {filteredLogs.map((l) => (
+                    <tr key={l.id} className="hover:bg-[#2A2A2F]/50 transition-colors font-mono">
+                      <td className="px-4 py-3.5 text-[#8A8A96]">{l.timestamp}</td>
+                      <td className="px-4 py-3.5 text-[#00D1E8] font-bold font-sans">{l.user}</td>
+                      <td className="px-4 py-3.5 font-sans text-white">{l.affiliation}</td>
+                      <td className="px-4 py-3.5">{l.ip}</td>
+                      <td className="px-4 py-3.5">
+                        <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                          l.result === "성공" ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#EF4444]/20 text-[#EF4444]"
+                        }`}>
+                          {l.result}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3.5 font-sans text-[#8A8A96]">{l.reason}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           </div>
         )}
       </div>
@@ -1625,24 +1955,60 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
   }
 
   // ─────────────────────────────────────────────────────────────
-  // 9. SYS-NOTICE (시스템 공지사항)
+  // 9. SYS-NOTICE (공지사항 관리)
   // ─────────────────────────────────────────────────────────────
   if (currentPage === "sys-notice") {
+    const handleDeleteNotice = (id: string) => {
+      if (confirm("해당 공지사항을 삭제하시겠습니까?")) {
+        setNoticeList(noticeList.filter(n => n.id !== id));
+        alert("공지사항이 삭제되었습니다.");
+      }
+    };
+
+    const handleSaveNotice = (e: React.FormEvent) => {
+      e.preventDefault();
+      if (!newNotice.title.trim()) return;
+
+      if (editNoticeModal) {
+        // Edit existing notice
+        setNoticeList(noticeList.map(n => n.id === editNoticeModal.id ? {
+          ...n,
+          title: newNotice.title.trim(),
+          targetCompany: newNotice.targetCompany,
+          noticeType: newNotice.noticeType,
+          status: newNotice.status,
+          isPopup: newNotice.isPopup,
+          content: newNotice.content
+        } : n));
+        setEditNoticeModal(null);
+        setShowNoticeModal(false);
+        setNewNotice({ title: "", targetCompany: "전체 (모든 사용자)", noticeType: "긴급", status: "공개", isPopup: false, content: "" });
+        alert("공지사항이 수정되었습니다.");
+      } else {
+        // Create new notice
+        handleSendNoticeSubmit();
+      }
+    };
+
     return (
       <div className="p-6 space-y-6 text-[#ECECEC] font-sans">
         <div className="flex justify-between items-center pb-4 border-b border-[#2A2A2F]">
           <div>
             <h2 className="text-xl font-bold text-white flex items-center gap-2">
               <Megaphone className="w-5 h-5 text-[#00D1E8]" />
-              시스템 공지사항
+              공지사항 관리
             </h2>
-            <p className="text-xs text-[#8A8A96] mt-1">고객사 및 전체 현장에 긴급 공지사항을 등록하고 전파합니다.</p>
+            <p className="text-xs text-[#8A8A96] mt-1">고객사 및 전체 현장에 공지사항을 등록, 수정, 삭제 및 팝업 설정합니다.</p>
           </div>
           <button
-            onClick={() => setShowNoticeModal(true)}
+            onClick={() => {
+              setEditNoticeModal(null);
+              setNewNotice({ title: "", targetCompany: "전체 (모든 사용자)", noticeType: "긴급", status: "공개", isPopup: false, content: "" });
+              setShowNoticeModal(true);
+            }}
             className="px-3.5 py-2 bg-[#00D1E8] hover:bg-[#00D1E8]/90 text-[#111113] font-bold rounded-lg text-xs flex items-center gap-1.5 cursor-pointer"
           >
-            <Plus className="w-3.5 h-3.5" /> 공지 작성
+            <Plus className="w-3.5 h-3.5" /> 공지사항 등록
           </button>
         </div>
 
@@ -1653,10 +2019,12 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
               <tr>
                 <th className="px-4 py-3">번호</th>
                 <th className="px-4 py-3">제목</th>
-                <th className="px-4 py-3">작성자</th>
+                <th className="px-4 py-3">중요도</th>
                 <th className="px-4 py-3">수신 대상</th>
+                <th className="px-4 py-3">팝업 여부</th>
+                <th className="px-4 py-3">공개 설정</th>
                 <th className="px-4 py-3">등록일시</th>
-                <th className="px-4 py-3">상태</th>
+                <th className="px-4 py-3 text-right">관리</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-[#2A2A2F] text-white">
@@ -1664,21 +2032,56 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                 <tr key={n.id} className="hover:bg-[#2A2A2F]/50 transition-colors">
                   <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{noticeList.length - idx}</td>
                   <td className="px-4 py-3.5 font-bold text-white flex items-center gap-2">
-                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold ${
+                    {n.title}
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
                       n.noticeType === "긴급" ? "bg-[#EF4444]/20 text-[#EF4444]" :
                       n.noticeType === "점검" ? "bg-[#F59E0B]/20 text-[#F59E0B]" : "bg-[#00D1E8]/20 text-[#00D1E8]"
                     }`}>
                       {n.noticeType}
                     </span>
-                    {n.title}
                   </td>
-                  <td className="px-4 py-3.5 text-white">{n.sender}</td>
-                  <td className="px-4 py-3.5 text-[#00D1E8]">{n.targetCompany}</td>
-                  <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{n.sentAt}</td>
+                  <td className="px-4 py-3.5 text-[#00D1E8] font-semibold">{n.targetCompany}</td>
                   <td className="px-4 py-3.5">
-                    <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-[#22C55E]/20 text-[#22C55E]">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      n.isPopup ? "bg-[#A855F7]/20 text-[#A855F7]" : "bg-[#8A8A96]/20 text-[#8A8A96]"
+                    }`}>
+                      {n.isPopup ? "팝업 노출" : "일반"}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3.5">
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                      n.status === "공개" ? "bg-[#22C55E]/20 text-[#22C55E]" : "bg-[#8A8A96]/20 text-[#8A8A96]"
+                    }`}>
                       {n.status}
                     </span>
+                  </td>
+                  <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{n.sentAt}</td>
+                  <td className="px-4 py-3.5 text-right space-x-1">
+                    <button
+                      onClick={() => {
+                        setEditNoticeModal(n);
+                        setNewNotice({
+                          title: n.title,
+                          targetCompany: n.targetCompany,
+                          noticeType: n.noticeType || "긴급",
+                          status: n.status || "공개",
+                          isPopup: !!n.isPopup,
+                          content: n.content || ""
+                        });
+                        setShowNoticeModal(true);
+                      }}
+                      className="px-2.5 py-1 bg-[#2A2A2F] hover:bg-[#3A3A40] text-white rounded text-xs font-bold cursor-pointer"
+                    >
+                      수정
+                    </button>
+                    <button
+                      onClick={() => handleDeleteNotice(n.id)}
+                      className="px-2.5 py-1 bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-[#EF4444] rounded text-xs font-bold cursor-pointer"
+                    >
+                      삭제
+                    </button>
                   </td>
                 </tr>
               ))}
@@ -1686,12 +2089,14 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
           </table>
         </div>
 
-        {/* Write Notice Modal */}
+        {/* Write / Edit Notice Modal */}
         {showNoticeModal && (
           <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4">
             <div className="w-full max-w-md bg-[#222226] border border-[#2A2A2F] rounded-xl p-6 space-y-4 shadow-2xl">
-              <h3 className="text-base font-bold text-white border-b border-[#2A2A2F] pb-3">공지사항 작성 및 등록</h3>
-              <form onSubmit={(e) => { e.preventDefault(); handleSendNoticeSubmit(); }} className="space-y-3 text-xs">
+              <h3 className="text-base font-bold text-white border-b border-[#2A2A2F] pb-3">
+                {editNoticeModal ? "공지사항 수정" : "공지사항 작성 및 등록"}
+              </h3>
+              <form onSubmit={handleSaveNotice} className="space-y-3 text-xs">
                 <div>
                   <label className="text-[#8A8A96] font-semibold block mb-1">수신 대상</label>
                   <select
@@ -1705,18 +2110,44 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                     <option value="전체 고객사">전체 고객사</option>
                   </select>
                 </div>
-                <div>
-                  <label className="text-[#8A8A96] font-semibold block mb-1">중요도 (유형)</label>
-                  <select
-                    value={newNotice.noticeType}
-                    onChange={(e) => setNewNotice({ ...newNotice, noticeType: e.target.value })}
-                    className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none"
-                  >
-                    <option value="긴급">긴급</option>
-                    <option value="일반">일반</option>
-                    <option value="점검">점검</option>
-                  </select>
+
+                <div className="grid grid-cols-3 gap-2">
+                  <div>
+                    <label className="text-[#8A8A96] font-semibold block mb-1">중요도</label>
+                    <select
+                      value={newNotice.noticeType}
+                      onChange={(e) => setNewNotice({ ...newNotice, noticeType: e.target.value })}
+                      className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-2.5 py-2 rounded outline-none"
+                    >
+                      <option value="긴급">긴급</option>
+                      <option value="일반">일반</option>
+                      <option value="점검">점검</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[#8A8A96] font-semibold block mb-1">공개 설정</label>
+                    <select
+                      value={newNotice.status}
+                      onChange={(e) => setNewNotice({ ...newNotice, status: e.target.value })}
+                      className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-2.5 py-2 rounded outline-none"
+                    >
+                      <option value="공개">공개</option>
+                      <option value="비공개">비공개</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="text-[#8A8A96] font-semibold block mb-1">팝업 설정</label>
+                    <select
+                      value={newNotice.isPopup ? "true" : "false"}
+                      onChange={(e) => setNewNotice({ ...newNotice, isPopup: e.target.value === "true" })}
+                      className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-2.5 py-2 rounded outline-none"
+                    >
+                      <option value="false">일반 공지</option>
+                      <option value="true">팝업 노출</option>
+                    </select>
+                  </div>
                 </div>
+
                 <div>
                   <label className="text-[#8A8A96] font-semibold block mb-1">공지 제목</label>
                   <input
@@ -1728,6 +2159,7 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                     className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none"
                   />
                 </div>
+
                 <div>
                   <label className="text-[#8A8A96] font-semibold block mb-1">공지 내용</label>
                   <textarea
@@ -1739,10 +2171,14 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                     className="w-full bg-[#111113] border border-[#2A2A2F] text-white p-3 rounded outline-none"
                   />
                 </div>
+
                 <div className="flex gap-2 pt-3">
                   <button
                     type="button"
-                    onClick={() => setShowNoticeModal(false)}
+                    onClick={() => {
+                      setShowNoticeModal(false);
+                      setEditNoticeModal(null);
+                    }}
                     className="flex-1 py-2 bg-[#2A2A2F] text-white font-bold rounded cursor-pointer"
                   >
                     취소
@@ -1751,7 +2187,7 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                     type="submit"
                     className="flex-1 py-2 bg-[#00D1E8] text-[#111113] font-bold rounded cursor-pointer"
                   >
-                    발송하기
+                    {editNoticeModal ? "저장하기" : "발송하기"}
                   </button>
                 </div>
               </form>
@@ -1766,11 +2202,11 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
               <div className="w-12 h-12 rounded-full bg-[#00D1E8]/10 text-[#00D1E8] flex items-center justify-center mx-auto">
                 <Send className="w-6 h-6" />
               </div>
-              <h3 className="text-base font-bold text-white">공지 즉시 발송</h3>
+              <h3 className="text-base font-bold text-white">공지사항 등록 및 즉시 발송</h3>
               <p className="text-xs text-[#8A8A96] leading-relaxed">
-                <span className="text-[#00D1E8] font-bold">[{newNotice.targetCompany}]</span> 고객사에
+                <span className="text-[#00D1E8] font-bold">[{newNotice.targetCompany}]</span> 대상으로
                 <br />
-                공지사항을 즉시 시스템 전파 및 발송하시겠습니까?
+                공지사항을 저장 및 전파하시겠습니까?
               </p>
               <div className="flex gap-2 pt-2">
                 <button
@@ -1887,14 +2323,14 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                   <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{c.createdAt}</td>
                   <td className="px-4 py-3.5 text-right space-x-1">
                     <button
-                      onClick={() => alert(`[${c.name}] 정보 수정 모달`)}
-                      className="px-2 py-1 bg-[#2A2A2F] hover:bg-[#3A3A40] text-xs rounded text-[#ECECEC]"
+                      onClick={() => setEditingCustomer({ ...c })}
+                      className="px-2 py-1 bg-[#2A2A2F] hover:bg-[#3A3A40] text-xs rounded text-[#ECECEC] cursor-pointer"
                     >
                       수정
                     </button>
                     <button
                       onClick={() => setCustomers(customers.filter(x => x.id !== c.id))}
-                      className="px-2 py-1 bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-xs rounded text-[#EF4444]"
+                      className="px-2 py-1 bg-[#EF4444]/20 hover:bg-[#EF4444]/30 text-xs rounded text-[#EF4444] cursor-pointer"
                     >
                       삭제
                     </button>
@@ -1976,6 +2412,102 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                     className="flex-1 py-2 bg-[#00D1E8] text-[#111113] font-bold rounded cursor-pointer"
                   >
                     등록 완료
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
+
+        {/* 고객사 정보 수정 모달 */}
+        {editingCustomer && (
+          <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-[9999] p-4">
+            <div className="w-full max-w-md bg-[#222226] border border-[#2A2A2F] rounded-xl p-6 space-y-4 shadow-2xl">
+              <h3 className="text-base font-bold text-white border-b border-[#2A2A2F] pb-3">고객사 정보 수정</h3>
+              <form
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  setCustomers(customers.map(c => c.id === editingCustomer.id ? editingCustomer : c));
+                  alert(`[${editingCustomer.name}] 고객사 정보가 수정되었습니다.`);
+                  setEditingCustomer(null);
+                }}
+                className="space-y-3 text-xs"
+              >
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">고객사명</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCustomer.name}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, name: e.target.value })}
+                    className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none focus:border-[#00D1E8]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">담당자 성명</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCustomer.managerName}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, managerName: e.target.value })}
+                    className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none focus:border-[#00D1E8]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">연락처</label>
+                  <input
+                    type="text"
+                    required
+                    value={editingCustomer.tel}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, tel: e.target.value })}
+                    className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none focus:border-[#00D1E8]"
+                  />
+                </div>
+                <div>
+                  <label className="text-[#8A8A96] font-semibold block mb-1">계약 상태</label>
+                  <select
+                    value={editingCustomer.contractStatus}
+                    onChange={(e) => setEditingCustomer({ ...editingCustomer, contractStatus: e.target.value })}
+                    className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none"
+                  >
+                    <option value="계약중">계약중</option>
+                    <option value="만료예정">만료예정</option>
+                    <option value="종료">종료</option>
+                  </select>
+                </div>
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="text-[#8A8A96] font-semibold block mb-1">계약 시작일</label>
+                    <input
+                      type="date"
+                      value={editingCustomer.startDate}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, startDate: e.target.value })}
+                      className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[#8A8A96] font-semibold block mb-1">계약 종료일</label>
+                    <input
+                      type="date"
+                      value={editingCustomer.endDate}
+                      onChange={(e) => setEditingCustomer({ ...editingCustomer, endDate: e.target.value })}
+                      className="w-full bg-[#111113] border border-[#2A2A2F] text-white px-3 py-2 rounded outline-none"
+                    />
+                  </div>
+                </div>
+                <div className="flex gap-2 pt-3">
+                  <button
+                    type="button"
+                    onClick={() => setEditingCustomer(null)}
+                    className="flex-1 py-2 bg-[#2A2A2F] text-white font-bold rounded cursor-pointer"
+                  >
+                    취소
+                  </button>
+                  <button
+                    type="submit"
+                    className="flex-1 py-2 bg-[#00D1E8] text-[#111113] font-bold rounded cursor-pointer"
+                  >
+                    수정 완료
                   </button>
                 </div>
               </form>
@@ -2135,12 +2667,6 @@ export default function SysAdminViews({ currentPage, navigate }: SysAdminViewsPr
                   <td className="px-4 py-3.5 font-mono text-[#8A8A96]">{a.createdAt}</td>
                   <td className="px-4 py-3.5 text-right">
                     <div className="flex gap-1 justify-end">
-                      <button
-                        onClick={() => setViewAccModal(a)}
-                        className="px-2 py-1 bg-[#2A2A2F] hover:bg-[#3A3A40] text-white font-bold rounded text-[10px] cursor-pointer"
-                      >
-                        보기
-                      </button>
                       <button
                         onClick={() => setEditAccModal({ ...a })}
                         className="px-2 py-1 bg-[#00D1E8]/20 hover:bg-[#00D1E8]/30 text-[#00D1E8] font-bold rounded text-[10px] cursor-pointer"

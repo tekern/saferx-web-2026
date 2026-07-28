@@ -941,11 +941,7 @@ export default function App() {
             <span className="text-[9px] font-mono text-[#00D1E8] font-bold block pb-1 border-b border-[#2A2A2F] mb-1">
               ── 인프라 모니터링 ──
             </span>
-            {renderLnbButton({ id: "infra-vms", label: "VMS 영상 서버", icon: Tv })}
-            {renderLnbButton({ id: "infra-ai", label: "AI 서버", icon: Activity })}
-            {renderLnbButton({ id: "infra-thingx", label: "ThingX IoT", icon: Radio })}
-            {renderLnbButton({ id: "infra-db", label: "DB 서버", icon: Database })}
-            {renderLnbButton({ id: "infra-net", label: "네트워크", icon: Server })}
+            {renderLnbButton({ id: "sys-servers", label: "서버 관리", icon: Server })}
           </div>
 
           <div className="space-y-1">
@@ -954,7 +950,7 @@ export default function App() {
             </span>
             {renderLnbButton({ id: "sys-logs", label: "접속 로그", icon: Clock })}
             {renderLnbButton({ id: "sys-alerts", label: "알림 설정", icon: Bell })}
-            {renderLnbButton({ id: "sys-notice", label: "공지 발송", icon: Megaphone })}
+            {renderLnbButton({ id: "sys-notice", label: "공지사항 관리", icon: Megaphone })}
           </div>
 
           <div className="space-y-1">
@@ -1248,7 +1244,7 @@ export default function App() {
             />
           )}
 
-          {["sys-customers", "sys-contracts", "sys-accounts", "sys-roles", "sys-devices", "sys-devices-assign", "sys-fota", "infra-vms", "infra-ai", "infra-thingx", "infra-db", "infra-net", "sys-logs", "sys-alerts", "sys-notice"].includes(currentPage) && (
+          {["sys-customers", "sys-contracts", "sys-accounts", "sys-roles", "sys-devices", "sys-device-assign", "sys-devices-assign", "sys-fota", "sys-servers", "sys-infra", "infra-vms", "infra-ai", "infra-thingx", "infra-db", "infra-net", "sys-logs", "sys-alerts", "sys-notice"].includes(currentPage) && (
             <SysAdminViews
               currentPage={currentPage}
               navigate={navigate}
